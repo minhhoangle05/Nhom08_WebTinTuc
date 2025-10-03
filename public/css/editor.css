@@ -1,0 +1,116 @@
+/* Custom styles for TinyMCE editor */
+
+/* Note Box */
+.note-box {
+    background-color: #e7f3fe;
+    border-left: 4px solid #2196F3;
+    margin: 1.5em 0;
+    padding: 1em;
+}
+
+/* Warning Box */
+.warning-box {
+    background-color: #fff3e0;
+    border-left: 4px solid #ff9800;
+    margin: 1.5em 0;
+    padding: 1em;
+}
+
+/* Code blocks */
+pre {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1em;
+    margin: 1.5em 0;
+    overflow-x: auto;
+}
+
+/* Inline code */
+code {
+    background-color: #f5f5f5;
+    border-radius: 3px;
+    padding: 0.2em 0.4em;
+    font-family: Consolas, Monaco, 'Andale Mono', monospace;
+}
+
+/* Blockquotes */
+blockquote {
+    border-left: 4px solid #ddd;
+    margin: 1.5em 0;
+    padding: 0.5em 1em;
+    font-style: italic;
+    color: #666;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+    height: auto;
+    margin: 1em 0;
+}
+
+.image-caption {
+    text-align: center;
+    font-style: italic;
+    color: #666;
+    margin-top: -0.5em;
+    margin-bottom: 1em;
+}
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.5em 0;
+}
+
+table th,
+table td {
+    border: 1px solid #ddd;
+    padding: 0.5em;
+}
+
+table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+/* Auto-save notification */
+.autosave-notice {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    z-index: 9999;
+    animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Reading time display */
+.reading-time {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 0.5em;
+}
+
+/* Form validation styles */
+.is-invalid {
+    border-color: #dc3545;
+}
+
+.invalid-feedback {
+    display: block;
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}

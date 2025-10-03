@@ -1,0 +1,13 @@
+RewriteEngine On
+RewriteBase /Web-Project/
+
+# Force root to use the front controller
+RewriteRule ^$ public/index.php [QSA,L]
+
+# Allow direct access to files inside /public (css, js, images, etc.)
+RewriteRule ^public/ - [L]
+
+# Route all other requests to the front controller
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ public/index.php [QSA,L]
