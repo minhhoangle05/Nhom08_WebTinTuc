@@ -11,8 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
     <link rel="stylesheet" href="public/css/style.css">
+    
 </head>
 <body>
     <!-- Navigation -->
@@ -68,6 +68,7 @@
                             <li><a class="dropdown-item" href="#" onclick="showPage('register')">Register</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="#" onclick="showPage('admin')">Admin Panel</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="handleLogout()">Log Out</a></li>
                         </ul>
                     </div>
                 </div>
@@ -432,6 +433,219 @@
             </div>
         </div>
 
+        <!-- Category Page -->
+        <div id="categoryPage" class="page-content" style="display: none;">
+            <div class="container mt-4">
+                <div class="row">
+                    <div class="col-12">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#" onclick="showPage('home')">Home</a></li>
+                                <li class="breadcrumb-item active" id="categoryBreadcrumb">Category</li>
+                            </ol>
+                        </nav>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h1 class="fw-bold" id="categoryTitle">Category Articles</h1>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    Sort by
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="sortArticles('latest')">Latest</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="sortArticles('popular')">Most Popular</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="sortArticles('oldest')">Oldest</a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="row" id="categoryArticlesContainer">
+                            <!-- Category articles will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Article Detail Page -->
+        <div id="articlePage" class="page-content" style="display: none;">
+            <div class="container mt-4">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#" onclick="showPage('home')">Home</a></li>
+                                <li class="breadcrumb-item"><a href="#" id="articleCategoryLink">Category</a></li>
+                                <li class="breadcrumb-item active">Article</li>
+                            </ol>
+                        </nav>
+
+                        <article class="mb-5">
+                            <header class="mb-4">
+                                <span class="category-badge mb-3 d-inline-block" id="articleCategory">Technology</span>
+                                <h1 class="display-5 fw-bold mb-3" id="articleTitle">Article Title</h1>
+                                <div class="author-info">
+                                    <img src="https://via.placeholder.com/40x40/007bff/ffffff?text=A" alt="Author" class="author-avatar" id="authorAvatar">
+                                    <div>
+                                        <strong id="authorName">Author Name</strong>
+                                        <div class="text-muted small">
+                                            <span id="publishDate">Published on March 15, 2024</span> • 
+                                            <span id="readTime">5 min read</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <img src="https://via.placeholder.com/800x400/007bff/ffffff?text=Article+Image" alt="Article Image" class="img-fluid rounded mb-4" id="articleImage">
+
+                            <div class="article-content" id="articleContent">
+                                <p class="lead">This is the article lead paragraph that provides an engaging introduction to the content.</p>
+                                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                                <h3>Section Heading</h3>
+                                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                                <blockquote class="blockquote border-start border-primary border-4 ps-3 my-4">
+                                    <p class="mb-0">"This is an inspiring quote from the article that highlights a key point."</p>
+                                </blockquote>
+                                <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-4 pt-4 border-top">
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-primary" onclick="likeArticle()">
+                                        <i class="bi bi-heart"></i> Like (24)
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="shareArticle()">
+                                        <i class="bi bi-share"></i> Share
+                                    </button>
+                                    <button class="btn btn-outline-warning" onclick="saveArticle()">
+                                        <i class="bi bi-bookmark"></i> Save
+                                    </button>
+                                </div>
+                                <div class="text-muted">
+                                    <i class="bi bi-eye"></i> 1,234 views
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Related Articles -->
+                        <section class="mb-5">
+                            <h3 class="fw-bold mb-4">Related Articles</h3>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card article-card">
+                                        <img src="https://via.placeholder.com/300x150/28a745/ffffff?text=Related+1" class="card-img-top" alt="Related Article">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Related Article Title 1</h6>
+                                            <p class="card-text text-muted small">Brief description of the related article...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card article-card">
+                                        <img src="https://via.placeholder.com/300x150/ffc107/000000?text=Related+2" class="card-img-top" alt="Related Article">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Related Article Title 2</h6>
+                                            <p class="card-text text-muted small">Brief description of the related article...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Comments Section -->
+                        <section>
+                            <h3 class="fw-bold mb-4">Comments (3)</h3>
+                            
+                            <!-- Comment Form -->
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <form onsubmit="submitComment(event)">
+                                        <div class="mb-3">
+                                            <textarea class="form-control" rows="3" placeholder="Write your comment..." required></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Post Comment</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Comments List -->
+                            <div id="commentsList">
+                                <div class="comment-item">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <img src="https://via.placeholder.com/40x40/dc3545/ffffff?text=U1" alt="User" class="author-avatar">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <strong>John Doe</strong>
+                                                <small class="text-muted">2 hours ago</small>
+                                            </div>
+                                            <p class="mt-2">Great article! Really enjoyed reading about this topic. Looking forward to more content like this.</p>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-heart"></i> 5
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary">Reply</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="comment-item">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <img src="https://via.placeholder.com/40x40/28a745/ffffff?text=U2" alt="User" class="author-avatar">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <strong>Jane Smith</strong>
+                                                <small class="text-muted">5 hours ago</small>
+                                            </div>
+                                            <p class="mt-2">Very informative! I learned something new today. Thank you for sharing this knowledge.</p>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-heart"></i> 3
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary">Reply</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Article Sidebar -->
+                    <div class="col-lg-4">
+                        <div class="sidebar-widget">
+                            <h5 class="fw-bold mb-3">About the Author</h5>
+                            <div class="text-center">
+                                <img src="https://via.placeholder.com/80x80/007bff/ffffff?text=A" alt="Author" class="rounded-circle mb-3" style="width: 80px; height: 80px;">
+                                <h6 class="fw-bold">Author Name</h6>
+                                <p class="text-muted small">Technology enthusiast and writer with 5+ years of experience in the industry.</p>
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="#" class="btn btn-sm btn-outline-primary">Follow</a>
+                                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-twitter"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sidebar-widget">
+                            <h5 class="fw-bold mb-3">More from Technology</h5>
+                            <div class="list-group list-group-flush">
+                                <a href="#" class="list-group-item list-group-item-action border-0 px-0">
+                                    <h6 class="mb-1">Machine Learning Basics</h6>
+                                    <small class="text-muted">March 10, 2024</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action border-0 px-0">
+                                    <h6 class="mb-1">Web Development Trends</h6>
+                                    <small class="text-muted">March 8, 2024</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Search Results Page -->
         <div id="searchPage" class="page-content" style="display: none;">
             <div class="container mt-4">
@@ -500,20 +714,16 @@
                                 </div>
                                 
                                 <form onsubmit="handleLogin(event)">
-                                    <div class="mb-3">
-                                        <label for="loginEmail" class="form-label">Email</label>
-                                        <input type="email" class="form-control" id="loginEmail" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="loginPassword" class="form-label">Password</label>
-                                        <input type="password" class="form-control" id="loginPassword" required>
-                                    </div>
-                                    <div class="mb-3 form-check">
-                                        <input type="checkbox" class="form-check-input" id="rememberMe">
-                                        <label class="form-check-label" for="rememberMe">Remember me</label>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
-                                </form>
+    <div class="mb-3">
+        <label for="loginEmail" class="form-label">Email</label>
+        <input type="email" class="form-control" id="loginEmail" required>
+    </div>
+    <div class="mb-3">
+        <label for="loginPassword" class="form-label">Password</label>
+        <input type="password" class="form-control" id="loginPassword" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
+</form>
                                 
                                 <div class="text-center">
                                     <a href="#" onclick="showPage('forgot')" class="text-decoration-none">Forgot password?</a>
@@ -546,38 +756,45 @@
                                 </div>
                                 
                                 <form onsubmit="handleRegister(event)">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="firstName" class="form-label">First Name</label>
-                                            <input type="text" class="form-control" id="firstName" required>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="lastName" class="form-label">Last Name</label>
-                                            <input type="text" class="form-control" id="lastName" required>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="registerEmail" class="form-label">Email</label>
-                                        <input type="email" class="form-control" id="registerEmail" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="registerPassword" class="form-label">Password</label>
-                                        <input type="password" class="form-control" id="registerPassword" required>
-                                        <div class="form-text">Password must be at least 8 characters long</div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="confirmPassword" class="form-label">Confirm Password</label>
-                                        <input type="password" class="form-control" id="confirmPassword" required>
-                                    </div>
-                                    <div class="mb-3 form-check">
-                                        <input type="checkbox" class="form-check-input" id="agreeTerms" required>
-                                        <label class="form-check-label" for="agreeTerms">
-                                            I agree to the <a href="#" class="text-decoration-none">Terms of Service</a> and 
-                                            <a href="#" class="text-decoration-none">Privacy Policy</a>
-                                        </label>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100 mb-3">Create Account</button>
-                                </form>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="firstName" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="firstName" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="lastName" class="form-label">Last Name</label>
+            <input type="text" class="form-control" id="lastName" required>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label for="registerEmail" class="form-label">Email</label>
+        <input type="email" class="form-control" id="registerEmail" required>
+    </div>
+    <div class="mb-3">
+        <label for="registerPassword" class="form-label">Password</label>
+        <input type="password" class="form-control" id="registerPassword" required>
+        <div class="form-text">Password must be at least 8 characters long</div>
+    </div>
+    <div class="mb-3">
+        <label for="confirmPassword" class="form-label">Confirm Password</label>
+        <input type="password" class="form-control" id="confirmPassword" required>
+    </div>
+    <div class="mb-3">
+        <label for="registerRole" class="form-label">Role</label>
+        <select class="form-select" id="registerRole" required>
+            <option value="reader">Reader</option>
+            <option value="editor">Editor</option>
+        </select>
+    </div>
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+        <label class="form-check-label" for="agreeTerms">
+            I agree to the <a href="#" class="text-decoration-none">Terms of Service</a> and 
+            <a href="#" class="text-decoration-none">Privacy Policy</a>
+        </label>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 mb-3">Create Account</button>
+</form>
                                 
                                 <div class="text-center">
                                     <p class="mb-0">Already have an account? 
@@ -657,27 +874,21 @@
                                 </div>
                                 <div class="card-body">
                                     <form onsubmit="updateProfile(event)">
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label">First Name</label>
-                                                <input type="text" class="form-control" value="John">
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label">Last Name</label>
-                                                <input type="text" class="form-control" value="Doe">
-                                            </div>
-                                        </div>
                                         <div class="mb-3">
                                             <label class="form-label">Email</label>
-                                            <input type="email" class="form-control" value="john.doe@example.com">
+                                            <input type="email" class="form-control" id="profileEmail" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Role</label>
+                                            <input type="text" class="form-control" id="profileRole" readonly>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Bio</label>
-                                            <textarea class="form-control" rows="3" placeholder="Tell us about yourself..."></textarea>
+                                            <textarea class="form-control" id="profileBio" rows="3" placeholder="Tell us about yourself..."></textarea>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Location</label>
-                                            <input type="text" class="form-control" placeholder="City, Country">
+                                            <input type="text" class="form-control" id="profileLocation" placeholder="City, Country">
                                         </div>
                                         <button type="submit" class="btn btn-primary">Save Changes</button>
                                     </form>
@@ -1426,12 +1637,23 @@
 
         // Page navigation with smooth transitions
         function showPage(pageId, skipTransition = false) {
-            if (currentPage === pageId && !skipTransition) return;
-            
+            const userRole = localStorage.getItem('userRole');
+
+            if (pageId === 'admin' && userRole !== 'admin') {
+                alert('Access denied. Admins only.');
+                return;
+            }
+
+            if (pageId === 'submitArticle' && userRole !== 'editor') {
+                alert('Access denied. Editors only.');
+                return;
+            }
+
+            // Hiển thị trang nếu không có vấn đề về quyền
             const loadingOverlay = document.getElementById('pageLoadingOverlay');
             const currentPageElement = document.getElementById(currentPage + 'Page');
             const targetPageElement = document.getElementById(pageId + 'Page');
-            
+
             if (!skipTransition) {
                 // Show loading overlay
                 loadingOverlay.classList.add('active');
@@ -1446,237 +1668,81 @@
                     // Hide all pages
                     document.querySelectorAll('.page-content').forEach(page => {
                         page.style.display = 'none';
-                        page.classList.remove('page-exit', 'page-enter', 'page-enter-active');
                     });
                     
-                    // Show target page with enter animation
+                    // Show target page
                     targetPageElement.style.display = 'block';
-                    targetPageElement.classList.add('page-enter');
                     
-                    // Trigger enter animation
-                    requestAnimationFrame(() => {
-                        targetPageElement.classList.remove('page-enter');
-                        targetPageElement.classList.add('page-enter-active');
-                        
-                        // Hide loading overlay
-                        setTimeout(() => {
-                            loadingOverlay.classList.remove('active');
-                            targetPageElement.classList.remove('page-enter-active');
-                        }, 200);
+                    // Remove active class from all nav links
+                    document.querySelectorAll('.nav-link, .admin-nav-link').forEach(link => {
+                        link.classList.remove('active');
                     });
                     
-                    currentPage = pageId;
+                    // Add active class to the current link
+                    const activeLink = document.querySelector(`a[onclick*="showPage('${pageId}')"`);
+                    if (activeLink) {
+                        activeLink.classList.add('active');
+                    }
                     
-                    // Update navbar active state
-                    updateNavbarActiveState(pageId);
-                    
-                    // Scroll to top smoothly
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    
-                    // Initialize animations for new page content
-                    setTimeout(() => {
-                        initScrollAnimations();
-                        initStaggerAnimations();
-                    }, 300);
-                    
-                }, 200);
+                    // Hide loading overlay
+                    loadingOverlay.classList.remove('active');
+                }, 300);
             } else {
-                // Instant page change (for initial load)
+                // Skip transition - hide all pages and show target page immediately
                 document.querySelectorAll('.page-content').forEach(page => {
                     page.style.display = 'none';
                 });
                 targetPageElement.style.display = 'block';
-                currentPage = pageId;
-                updateNavbarActiveState(pageId);
             }
-        }
-        
-        // Update navbar active state
-        function updateNavbarActiveState(pageId) {
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-            });
             
-            // Find and activate the corresponding nav link
-            const navLinks = document.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                const href = link.getAttribute('onclick');
-                if (href && href.includes(`'${pageId}'`)) {
-                    link.classList.add('active');
-                }
-            });
-        }
-        
-        // Initialize stagger animations
-        function initStaggerAnimations() {
-            const staggerElements = document.querySelectorAll('.fade-in');
-            staggerElements.forEach((element, index) => {
-                element.style.setProperty('--stagger-delay', `${index * 0.1}s`);
-                element.classList.add('stagger-animation');
-            });
+            currentPage = pageId;
         }
 
-        // Load and display articles
-        function loadArticles(filter = 'all') {
-            const container = document.getElementById('articlesContainer');
-            let articlesToShow = sampleArticles;
-            
-            if (filter === 'featured') {
-                articlesToShow = sampleArticles.filter(article => article.featured);
-            } else if (filter === 'trending') {
-                articlesToShow = sampleArticles.sort((a, b) => b.views - a.views).slice(0, 3);
-            }
-            
-            container.innerHTML = articlesToShow.map((article, index) => `
-                <div class="col-md-6 col-lg-4 mb-4 fade-in" style="animation-delay: ${index * 0.1}s;">
-                    <div class="card article-card h-100" onclick="showArticle(${article.id})">
-                        <img src="${article.image}" class="article-image" alt="${article.title}">
-                        <div class="card-body d-flex flex-column">
-                            <div class="mb-2">
-                                <span class="category-badge">${article.category}</span>
-                            </div>
-                            <h5 class="card-title fw-bold">${article.title}</h5>
-                            <p class="card-text text-muted flex-grow-1">${article.excerpt}</p>
-                            <div class="author-info mt-auto">
-                                <img src="https://via.placeholder.com/40x40/007bff/ffffff?text=${article.author.charAt(0)}" alt="${article.author}" class="author-avatar">
-                                <div>
-                                    <small class="fw-bold">${article.author}</small>
-                                    <div class="text-muted small">${article.date} • ${article.readTime}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-            
-            // Re-initialize animations for new content
+        // Initialize articles loading
+        function loadArticles() {
+            const articlesContainer = document.getElementById('articlesContainer');
+            articlesContainer.innerHTML = '';
+
+            // Simulate loading articles
             setTimeout(() => {
-                initScrollAnimations();
-            }, 100);
-        }
-
-        // Filter articles
-        function filterArticles(filter) {
-            currentFilter = filter;
-            loadArticles(filter);
-            
-            // Update active button
-            document.querySelectorAll('.btn-group .btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-        }
-
-        // Show article detail
-        function showArticle(articleId) {
-            const article = sampleArticles.find(a => a.id === articleId);
-            if (!article) return;
-            
-            // Update article content
-            document.getElementById('articleTitle').textContent = article.title;
-            document.getElementById('articleCategory').textContent = article.category;
-            document.getElementById('authorName').textContent = article.author;
-            document.getElementById('publishDate').textContent = `Published on ${article.date}`;
-            document.getElementById('readTime').textContent = article.readTime;
-            document.getElementById('articleImage').src = article.image;
-            document.getElementById('authorAvatar').src = `https://via.placeholder.com/40x40/007bff/ffffff?text=${article.author.charAt(0)}`;
-            
-            showPage('article');
-        }
-
-        // Show category page
-        function showCategory(category) {
-            const categoryArticles = sampleArticles.filter(article => 
-                article.category.toLowerCase() === category.toLowerCase()
-            );
-            
-            document.getElementById('categoryTitle').textContent = `${category.charAt(0).toUpperCase() + category.slice(1)} Articles`;
-            document.getElementById('categoryBreadcrumb').textContent = category.charAt(0).toUpperCase() + category.slice(1);
-            
-            const container = document.getElementById('categoryArticlesContainer');
-            container.innerHTML = categoryArticles.map((article, index) => `
-                <div class="col-md-6 col-lg-4 mb-4 fade-in" style="--stagger-delay: ${index * 0.1}s;">
-                    <div class="card article-card h-100" onclick="showArticle(${article.id})">
-                        <img src="${article.image}" class="article-image" alt="${article.title}">
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title fw-bold">${article.title}</h5>
-                            <p class="card-text text-muted flex-grow-1">${article.excerpt}</p>
-                            <div class="author-info mt-auto">
-                                <img src="https://via.placeholder.com/40x40/007bff/ffffff?text=${article.author.charAt(0)}" alt="${article.author}" class="author-avatar">
-                                <div>
-                                    <small class="fw-bold">${article.author}</small>
-                                    <div class="text-muted small">${article.date} • ${article.readTime}</div>
+                sampleArticles.forEach(article => {
+                    const articleElement = document.createElement('div');
+                    articleElement.className = 'col-md-6 mb-4';
+                    articleElement.innerHTML = `
+                        <div class="card article-card">
+                            <img src="${article.image}" class="card-img-top" alt="${article.title}">
+                            <div class="card-body">
+                                <h5 class="card-title">${article.title}</h5>
+                                <p class="card-text">${article.excerpt}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">By ${article.author} • ${article.date}</small>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="showArticle(${article.id})">Read More</button>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            `).join('');
-            
-            showPage('category');
-        }
-
-        // Search functionality
-        function performSearch(event) {
-            event.preventDefault();
-            const query = document.getElementById('searchInput').value.trim();
-            if (!query) return;
-            
-            const searchResults = sampleArticles.filter(article =>
-                article.title.toLowerCase().includes(query.toLowerCase()) ||
-                article.excerpt.toLowerCase().includes(query.toLowerCase()) ||
-                article.category.toLowerCase().includes(query.toLowerCase())
-            );
-            
-            document.getElementById('searchQuery').textContent = query;
-            document.getElementById('searchResultsCount').textContent = searchResults.length;
-            
-            const container = document.getElementById('searchResultsContainer');
-            if (searchResults.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-5 fade-in">
-                        <i class="bi bi-search" style="font-size: 3rem; color: var(--bs-gray-400);"></i>
-                        <h4 class="mt-3">No results found</h4>
-                        <p class="text-muted">Try adjusting your search terms or browse our categories.</p>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = searchResults.map((article, index) => `
-                    <div class="card mb-3 fade-in" style="--stagger-delay: ${index * 0.1}s;">
-                        <div class="row g-0">
-                            <div class="col-md-4">
-                                <img src="${article.image}" class="img-fluid rounded-start h-100" style="object-fit: cover;" alt="${article.title}">
-                            </div>
-                            <div class="col-md-8">
-                                <div class="card-body">
-                                    <span class="category-badge mb-2">${article.category}</span>
-                                    <h5 class="card-title fw-bold">${article.title}</h5>
-                                    <p class="card-text">${article.excerpt}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">By ${article.author} • ${article.date}</small>
-                                        <button class="btn btn-outline-primary btn-sm" onclick="showArticle(${article.id})">Read More</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            showPage('search');
+                    `;
+                    articlesContainer.appendChild(articleElement);
+                });
+            }, 500);
         }
 
         // Profile tab navigation
         function showProfileTab(tabName) {
-            // Hide all tabs
+            // Ẩn tất cả các tab
             document.querySelectorAll('.profile-tab').forEach(tab => {
                 tab.style.display = 'none';
             });
-            
-            // Show selected tab
-            document.getElementById(`profile${tabName.charAt(0).toUpperCase() + tabName.slice(1)}Tab`).style.display = 'block';
-            
-            // Update active link
+
+            // Hiển thị tab được chọn
+            const selectedTab = document.getElementById(`profile${tabName.charAt(0).toUpperCase() + tabName.slice(1)}Tab`);
+            selectedTab.style.display = 'block';
+
+            // Cập nhật thông tin cá nhân nếu mở tab "Personal Info"
+            if (tabName === 'info') {
+                updateProfileTab();
+            }
+
+            // Cập nhật trạng thái liên kết
             document.querySelectorAll('.list-group-item').forEach(link => {
                 link.classList.remove('active');
             });
@@ -1702,30 +1768,91 @@
 
         // Form handlers
         function handleLogin(event) {
-            event.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            // Simulate login
-            if (email && password) {
-                alert('Login successful! Welcome back.');
-                showPage('home');
-            }
+    event.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    // Lấy thông tin người dùng từ localStorage (giả lập)
+    const user = JSON.parse(localStorage.getItem('user'));
+
+    if (user && user.email === email && user.password === password) {
+        // Lưu trạng thái đăng nhập và vai trò vào localStorage
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userEmail', user.email);
+        localStorage.setItem('userRole', user.role);
+
+        // Cập nhật giao diện để phản ánh trạng thái đăng nhập
+        updateLoginState();
+
+        alert(`Login successful! Welcome back, ${user.role}.`);
+        showPage('home');
+    } else {
+        alert('Invalid email or password.');
+    }
+}
+
+        // Hàm cập nhật giao diện khi đăng nhập
+        function updateLoginState() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userEmail = localStorage.getItem('userEmail');
+    const userRole = localStorage.getItem('userRole');
+
+    const loginLink = document.querySelector('a[onclick*="showPage(\'login\')"]');
+    const registerLink = document.querySelector('a[onclick*="showPage(\'register\')"]');
+    const profileLink = document.querySelector('a[onclick*="showPage(\'profile\')"]');
+    const adminLink = document.querySelector('a[onclick*="showPage(\'admin\')"]');
+    const logoutLink = document.querySelector('a[onclick*="handleLogout()"]');
+
+    if (isLoggedIn) {
+        // Ẩn liên kết "Login" và "Register"
+        if (loginLink) loginLink.style.display = 'none';
+        if (registerLink) registerLink.style.display = 'none';
+
+        // Hiển thị liên kết "Profile" và "Log Out"
+        if (profileLink) {
+            profileLink.style.display = 'block';
+            profileLink.textContent = `Welcome, ${userEmail}`;
         }
+        if (logoutLink) logoutLink.style.display = 'block';
+
+        // Hiển thị liên kết "Admin" chỉ khi vai trò là admin
+        if (adminLink) {
+            adminLink.style.display = userRole === 'admin' ? 'block' : 'none';
+        }
+    } else {
+        // Hiển thị liên kết "Login" và "Register"
+        if (loginLink) loginLink.style.display = 'block';
+        if (registerLink) registerLink.style.display = 'block';
+
+        // Ẩn liên kết "Profile", "Admin", và "Log Out"
+        if (profileLink) profileLink.style.display = 'none';
+        if (adminLink) adminLink.style.display = 'none';
+        if (logoutLink) logoutLink.style.display = 'none';
+    }
+}
+
+        // Gọi hàm cập nhật giao diện khi tải trang
+        document.addEventListener('DOMContentLoaded', updateLoginState);
 
         function handleRegister(event) {
-            event.preventDefault();
-            const password = document.getElementById('registerPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (password !== confirmPassword) {
-                alert('Passwords do not match!');
-                return;
-            }
-            
-            alert('Registration successful! Welcome to ArticleHub.');
-            showPage('home');
-        }
+    event.preventDefault();
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const role = document.getElementById('registerRole').value;
+
+    if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+    }
+
+    // Lưu thông tin người dùng vào localStorage (giả lập)
+    const user = { email, password, role };
+    localStorage.setItem('user', JSON.stringify(user));
+
+    alert('Registration successful! Welcome to ArticleHub.');
+    showPage('login');
+}
 
         function handleForgotPassword(event) {
             event.preventDefault();
@@ -1738,9 +1865,17 @@
         }
 
         function updateProfile(event) {
-            event.preventDefault();
-            alert('Profile updated successfully!');
-        }
+    event.preventDefault();
+
+    const bio = document.getElementById('profileBio').value;
+    const location = document.getElementById('profileLocation').value;
+
+    // Lưu thông tin vào localStorage
+    localStorage.setItem('userBio', bio);
+    localStorage.setItem('userLocation', location);
+
+    alert('Profile updated successfully!');
+}
 
         function updateSettings(event) {
             event.preventDefault();
@@ -1834,6 +1969,38 @@
                 }
             }
         });
+
+        function handleLogout() {
+            // Xóa trạng thái đăng nhập khỏi localStorage
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+
+            // Cập nhật giao diện
+            updateLoginState();
+
+            // Chuyển hướng về trang đăng nhập
+            alert('You have been logged out.');
+            showPage('login');
+        }
+
+        function updateProfileTab() {
+    const userEmail = localStorage.getItem('userEmail');
+    const userRole = localStorage.getItem('userRole');
+    const userBio = localStorage.getItem('userBio') || '';
+    const userLocation = localStorage.getItem('userLocation') || '';
+
+    if (!userEmail) {
+        alert('You need to log in to view your profile.');
+        showPage('login');
+        return;
+    }
+
+    document.querySelector('#profileEmail').value = userEmail;
+    document.querySelector('#profileRole').value = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+    document.querySelector('#profileBio').value = userBio;
+    document.querySelector('#profileLocation').value = userLocation;
+}
     </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98409fbda35a81da',t:'MTc1ODY5OTUyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
