@@ -846,8 +846,8 @@
                         <div class="card">
                             <div class="card-body text-center">
                                 <img src="https://via.placeholder.com/100x100/007bff/ffffff?text=U" alt="Profile" class="rounded-circle mb-3" style="width: 100px; height: 100px;">
-                                <h5 class="fw-bold">John Doe</h5>
-                                <p class="text-muted">john.doe@example.com</p>
+                                <h5 class="fw-bold"></h5>
+                                <p class="text-muted"></p>
                                 <button class="btn btn-outline-primary btn-sm">Change Photo</button>
                             </div>
                         </div>
@@ -1986,9 +1986,8 @@
 
         function updateProfileTab() {
     const userEmail = localStorage.getItem('userEmail');
-    const userRole = localStorage.getItem('userRole');
-    const userBio = localStorage.getItem('userBio') || '';
-    const userLocation = localStorage.getItem('userLocation') || '';
+    const userFirstName = localStorage.getItem('userFirstName') || 'John';
+    const userLastName = localStorage.getItem('userLastName') || 'Doe';
 
     if (!userEmail) {
         alert('You need to log in to view your profile.');
@@ -1996,10 +1995,12 @@
         return;
     }
 
-    document.querySelector('#profileEmail').value = userEmail;
-    document.querySelector('#profileRole').value = userRole.charAt(0).toUpperCase() + userRole.slice(1);
-    document.querySelector('#profileBio').value = userBio;
-    document.querySelector('#profileLocation').value = userLocation;
+    // Hiển thị thông tin cá nhân
+    document.getElementById('profileFullName').textContent = `${userFirstName} ${userLastName}`;
+    document.getElementById('profileEmail').textContent = userEmail;
+    document.getElementById('profileFirstName').value = userFirstName;
+    document.getElementById('profileLastName').value = userLastName;
+    document.getElementById('profileEmailInput').value = userEmail;
 }
     </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98409fbda35a81da',t:'MTc1ODY5OTUyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
