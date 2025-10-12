@@ -50,11 +50,13 @@ class Router
     {
         // Remove query string
         $path = parse_url($uri, PHP_URL_PATH) ?? '/';
-        // Remove appFolder/public prefix if present
-        $base = rtrim(BASE_URL, '/');
-        if ($base !== '' && str_starts_with($path, $base)) {
-            $path = substr($path, strlen($base));
+        
+        // Lấy đường dẫn tương đối từ thư mục gốc của web server
+        $scriptName = dirname($_SERVER['SCRIPT_NAME']);
+        if (str_starts_with($path, $scriptName)) {
+            $path = substr($path, strlen($scriptName));
         }
+        
         return $path === '' ? '/' : $path;
     }
 

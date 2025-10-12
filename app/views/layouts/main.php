@@ -9,14 +9,15 @@ if (!isset($content)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= isset($title) ? htmlspecialchars($title) : 'ArticleHub - Your Source for Quality Content' ?></title>
-    <meta name="description" content="Discover amazing articles on technology, lifestyle, business and more. Join our community of writers and readers.">
-    <meta name="keywords" content="articles, blog, technology, lifestyle, business, writing">
+    <title><?= isset($title) ? htmlspecialchars($title) : 'ArticleHub - Nguồn tin tức chất lượng của bạn' ?></title>
+    <meta name="description" content="Khám phá những bài viết tuyệt vời về công nghệ, lối sống, kinh doanh và nhiều hơn nữa. Tham gia cộng đồng người viết và độc giả của chúng tôi.">
+    <meta name="keywords" content="bài viết, blog, công nghệ, lối sống, kinh doanh, viết lách">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/css/auth.css">
     
     <!-- JavaScript Libraries -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -93,7 +94,7 @@ if (!isset($content)) {
   </div>
 </nav>
 
-<main class="container my-4">
+<main>
   <?= $content ?>
 </main>
 
@@ -140,8 +141,47 @@ if (!isset($content)) {
   </div>
 </footer>
 
+<!-- Bootstrap and other core JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= BASE_URL ?>/js/app.js"></script>
+
+<!-- Auth form specific JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const password = document.getElementById('password');
+    if (togglePassword && password) {
+        togglePassword.addEventListener('click', function() {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
+        });
+    }
+
+    // Password match validation for registration
+    const password2 = document.getElementById('password2');
+    const passwordMatchMsg = document.querySelector('.password-match-msg');
+    if (password2 && passwordMatchMsg) {
+        const validatePassword = function() {
+            if (password.value !== password2.value) {
+                passwordMatchMsg.textContent = 'Mật khẩu không khớp';
+                passwordMatchMsg.classList.add('text-danger');
+                password2.setCustomValidity('Mật khẩu không khớp');
+            } else {
+                passwordMatchMsg.textContent = 'Mật khẩu khớp';
+                passwordMatchMsg.classList.remove('text-danger');
+                passwordMatchMsg.classList.add('text-success');
+                password2.setCustomValidity('');
+            }
+        };
+        password.addEventListener('change', validatePassword);
+        password2.addEventListener('keyup', validatePassword);
+    }
+});
+</script>
 </body>
 </html>
 

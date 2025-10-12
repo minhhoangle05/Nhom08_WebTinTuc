@@ -71,19 +71,37 @@ class ArticleController extends Controller
     public function search(): void
     {
         $page = max(1, (int)($_GET['page'] ?? 1));
+        $categorySlug = $_GET['category'] ?? null;
+        
         $filters = [
             'q' => $_GET['q'] ?? null,
-            'category' => $_GET['category'] ?? null,
             'tag' => $_GET['tag'] ?? null,
-            'sort' => $_GET['sort'] ?? 'latest'
+            'sort' => $_GET['sort'] ?? 'latest',
+            'status' => Article::STATUS_PUBLISHED
         ];
+
+        // Nếu có category, lấy thông tin category
+        $currentCategory = null;
+        if ($categorySlug) {
+            $currentCategory = $this->categoryModel->findBySlug($categorySlug);
+            if ($currentCategory) {
+                $filters['category_id'] = $currentCategory['id'];
+            }
+        }
         
         $limit = 12;
         $offset = ($page - 1) * $limit;
         
+        error_log("Search filters: " . print_r($filters, true));
         $articles = $this->articleModel->search($filters, $limit, $offset);
         $total = $this->articleModel->countSearch($filters);
         $totalPages = ceil($total / $limit);
+        
+        // Get all categories with article counts for sidebar
+        $categories = $this->categoryModel->withArticleCount();
+        
+        // Get popular articles for sidebar
+        $popularArticles = $this->articleModel->popular(5);
         
         // Build base URL for pagination
         $baseUrl = BASE_URL . '/articles/search?';
@@ -93,11 +111,17 @@ class ArticleController extends Controller
             $baseUrl .= http_build_query($queryParams) . '&';
         }
 
-        $this->view('articles/search', [
-            'title' => !empty($filters['category']) ? 'Bài viết trong danh mục: ' . $filters['category'] : 'Tìm kiếm bài viết',
+        $this->view('articles/index', [
+            'title' => $currentCategory ? 'Bài viết trong danh mục: ' . $currentCategory['name'] : 'Tìm kiếm bài viết',
             'articles' => $articles,
-            'category' => $filters['category'],
-            'query' => $filters['q'],
+            'categories' => $categories,
+            'popularArticles' => $popularArticles,
+            'currentCategory' => $currentCategory,
+            'currentSort' => $filters['sort'],
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'total' => $total,
+            'baseUrl' => $baseUrl,
             'currentPage' => $page,
             'totalPages' => $totalPages,
             'baseUrl' => $baseUrl
@@ -124,22 +148,34 @@ class ArticleController extends Controller
 
     public function store(): void
     {
-        if (!Auth::check()) {
-            header('Location: ' . BASE_URL . '/auth/login');
-            exit;
-        }
+        try {
+            // 1. Authentication check
+            if (!Auth::check()) {
+                header('Location: ' . BASE_URL . '/auth/login');
+                exit;
+            }
 
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo 'Invalid CSRF token';
-            return;
-        }
+            // 2. CSRF validation
+            $csrf = $_POST['csrf'] ?? null;
+            if (!CSRF::validate($csrf)) {
+                throw new \Exception('Phiên làm việc đã hết hạn, vui lòng thử lại');
+            }
 
-        $title = trim($_POST['title'] ?? '');
-        $slug = trim($_POST['slug'] ?? '');
-        $content = trim($_POST['content'] ?? '');
-        $categoryId = (int)($_POST['category_id'] ?? 0);
-        $tags = $_POST['tags'] ?? [];
+            // 3. Data validation
+            $title = trim($_POST['title'] ?? '');
+            $slug = trim($_POST['slug'] ?? '');
+            $content = trim($_POST['content'] ?? '');
+            $summary = trim($_POST['summary'] ?? '');
+            $categoryId = (int)($_POST['category_id'] ?? 0);
+            $tags = $_POST['tags'] ?? [];
+
+            // Basic validation
+            if (empty($title)) throw new \Exception('Tiêu đề không được để trống');
+            if (empty($content)) throw new \Exception('Nội dung không được để trống');
+            if (empty($slug)) {
+                // Auto-generate slug from title if empty
+                $slug = $this->createSlug($title);
+            }
         
         if ($title === '' || $slug === '' || $content === '') {
             http_response_code(422);
@@ -147,44 +183,84 @@ class ArticleController extends Controller
             return;
         }
 
-        $articleData = [
-            'title' => $title,
-            'slug' => $slug,
-            'content' => $content,
-            'user_id' => Auth::user()['id'],
-            'category_id' => $categoryId ?: null,
-            'tags' => $tags
-        ];
+            // 4. Prepare article data
+            $articleData = [
+                'title' => $title,
+                'slug' => $slug,
+                'content' => $content,
+                'summary' => $summary,
+                'user_id' => Auth::user()['id'],
+                'category_id' => $categoryId ?: null,
+                'tags' => array_filter($tags), // Remove empty values
+            ];
 
-        $articleId = $this->articleModel->create($articleData);
+            // 5. Create the article
+            $articleId = $this->articleModel->create($articleData);
 
-        ActivityLogger::log('article_create', $articleId);
-        
-        header('Location: ' . BASE_URL . '/article/' . rawurlencode($slug));
-        exit;
+            // 6. Log the activity and redirect
+            if ($articleId) {
+                ActivityLogger::log('article_create', $articleId);
+                header('Location: ' . BASE_URL . '/article/' . rawurlencode($slug));
+                exit;
+            }
+
+        } catch (\Exception $e) {
+            error_log("Error creating article: " . $e->getMessage());
+            
+            // Return to form with error message and old input
+            $this->view('articles/create', [
+                'title' => 'Tạo bài viết mới',
+                'error' => $e->getMessage(),
+                'csrf' => CSRF::token(),
+                'categories' => $this->categoryModel->all(),
+                'tags' => $this->tagModel->all(),
+                'oldInput' => $_POST
+            ]);
+            return;
+        }
     }
 
     public function show(string $slug): void
     {
+        error_log("Showing article with slug: " . $slug);
+        
+        // Tìm bài viết theo slug
         $article = $this->articleModel->findBySlug($slug);
         
         if (!$article) {
+            error_log("Article not found with slug: " . $slug);
             http_response_code(404);
-            echo 'Không tìm thấy bài viết';
+            $this->view('errors/404', [
+                'title' => 'Không tìm thấy bài viết',
+                'message' => 'Bài viết bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.'
+            ]);
             return;
+        }
+
+        error_log("Found article: " . print_r($article, true));
+
+        // Lấy thêm thông tin danh mục
+        if ($article['category_id']) {
+            $category = $this->categoryModel->findById($article['category_id']);
+            $article['category'] = $category;
         }
 
         $tags = $this->articleModel->getArticleTags($article['id']);
 
+        // Tăng lượt xem
         $this->articleModel->incrementViews($article['id']);
         if (Auth::check()) {
             ActivityLogger::log('article_view', $article['id']);
         }
 
+        // Lấy các bài viết liên quan
+        $relatedArticles = $this->articleModel->findRelated($article['id'], $article['category_id'], 4);
+
         $this->view('articles/show', [
             'title' => $article['title'],
             'article' => $article,
             'tags' => $tags,
+            'relatedArticles' => $relatedArticles,
             'csrf' => CSRF::token()
         ]);
     }
@@ -221,6 +297,41 @@ class ArticleController extends Controller
             'articleTags' => $articleTags,
             'csrf' => CSRF::token()
         ]);
+    }
+
+    /**
+     * Create URL friendly slug from title
+     */
+    private function createSlug(string $title): string
+    {
+        // Convert to lowercase and remove special characters
+        $slug = mb_strtolower($title, 'UTF-8');
+        
+        // Replace Vietnamese characters
+        $slug = str_replace(
+            ['á','à','ả','ã','ạ','ă','ắ','ằ','ẳ','ẵ','ặ','â','ấ','ầ','ẩ','ẫ','ậ',
+             'đ','é','è','ẻ','ẽ','ẹ','ê','ế','ề','ể','ễ','ệ',
+             'í','ì','ỉ','ĩ','ị','ó','ò','ỏ','õ','ọ','ô','ố','ồ','ổ','ỗ','ộ',
+             'ơ','ớ','ờ','ở','ỡ','ợ','ú','ù','ủ','ũ','ụ','ư','ứ','ừ','ử','ữ','ự',
+             'ý','ỳ','ỷ','ỹ','ỵ'],
+            ['a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a',
+             'd','e','e','e','e','e','e','e','e','e','e','e',
+             'i','i','i','i','i','o','o','o','o','o','o','o','o','o','o','o',
+             'o','o','o','o','o','o','u','u','u','u','u','u','u','u','u','u','u',
+             'y','y','y','y','y'],
+            $slug
+        );
+        
+        // Replace anything that's not a letter or number with a dash
+        $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
+        
+        // Replace multiple dashes with single dash
+        $slug = preg_replace('/-+/', '-', $slug);
+        
+        // Remove dashes from start and end
+        $slug = trim($slug, '-');
+        
+        return $slug;
     }
 
     public function update(int $id): void
@@ -394,6 +505,7 @@ class ArticleController extends Controller
             echo json_encode(['error' => 'Failed to publish article']);
         }
     }
+
 
     public function unpublish(int $id): void
     {

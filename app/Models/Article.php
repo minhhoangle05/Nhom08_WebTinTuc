@@ -14,6 +14,76 @@ class Article extends Model
     /**
      * Build the base SQL query with all necessary joins
      */
+    /**
+     * Create a new article with full validation and error handling
+     */
+    public function create(array $data): int
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // 1. Insert article
+            $stmt = $this->db->prepare('
+                INSERT INTO articles (
+                    title, 
+                    slug, 
+                    content,
+                    summary,
+                    user_id, 
+                    category_id, 
+                    status,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    :title,
+                    :slug,
+                    :content,
+                    :summary,
+                    :user_id,
+                    :category_id,
+                    :status,
+                    NOW(),
+                    NOW()
+                )
+            ');
+
+            $stmt->execute([
+                ':title' => $data['title'],
+                ':slug' => $data['slug'],
+                ':content' => $data['content'],
+                ':summary' => $data['summary'] ?? null,
+                ':user_id' => $data['user_id'],
+                ':category_id' => $data['category_id'],
+                ':status' => self::STATUS_PUBLISHED
+            ]);
+
+            $articleId = (int)$this->db->lastInsertId();
+
+            // 2. Handle tags if provided
+            if (!empty($data['tags'])) {
+                $tagStmt = $this->db->prepare('
+                    INSERT INTO article_tags (article_id, tag_id) 
+                    VALUES (:article_id, :tag_id)
+                ');
+
+                foreach ($data['tags'] as $tagId) {
+                    $tagStmt->execute([
+                        ':article_id' => $articleId,
+                        ':tag_id' => $tagId
+                    ]);
+                }
+            }
+
+            $this->db->commit();
+            return $articleId;
+
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            error_log("Database error in Article::create: " . $e->getMessage());
+            throw new \Exception('Không thể tạo bài viết. Vui lòng thử lại sau.');
+        }
+    }
+
     protected function buildBaseQuery(): string
     {
         return 'SELECT a.*, 
@@ -41,41 +111,38 @@ class Article extends Model
         if (!empty($params['category_id'])) {
             $where[] = 'a.category_id = ?';
             $values[] = $params['category_id'];
-        }
-
-        if (!empty($params['category'])) {
-            $where[] = 'c.name = ?';
-            $values[] = $params['category'];
-        }
-
-        if (!empty($params['category_slug'])) {
-            $where[] = 'c.slug = ?';
-            $values[] = $params['category_slug'];
+            error_log("Adding category_id condition: " . $params['category_id']);
         }
 
         if (!empty($params['tag'])) {
             $where[] = 't.name = ?';
             $values[] = $params['tag'];
+            error_log("Adding tag condition: " . $params['tag']);
         }
 
         if (!empty($params['q'])) {
-            $where[] = '(a.title LIKE ? OR a.content LIKE ?)';
+            $where[] = '(a.title LIKE ? OR a.content LIKE ? OR a.summary LIKE ?)';
             $searchTerm = '%' . $params['q'] . '%';
             $values[] = $searchTerm;
             $values[] = $searchTerm;
+            $values[] = $searchTerm;
+            error_log("Adding search term condition: " . $params['q']);
         }
 
+        // Status filter
         if (isset($params['status'])) {
             if ($params['status'] === 'all') {
-                // No status filter
+                error_log("No status filter applied");
             } else {
                 $where[] = 'a.status = ?';
                 $values[] = $params['status'];
+                error_log("Adding status condition: " . $params['status']);
             }
         } else if (!isset($params['include_drafts'])) {
             // Default: only show published articles for public views
             $where[] = 'a.status = ?';
             $values[] = self::STATUS_PUBLISHED;
+            error_log("Adding default published status condition");
         }
 
         if (!empty($params['user_id'])) {
@@ -101,6 +168,8 @@ class Article extends Model
      */
     public function search(array $params = [], int $limit = 10, int $offset = 0): array
     {
+        error_log("Starting article search with params: " . print_r($params, true));
+        
         $conditions = $this->buildSearchConditions($params);
         $where = $conditions['where'];
         $values = $conditions['values'];
@@ -109,6 +178,7 @@ class Article extends Model
 
         if (!empty($where)) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
+            error_log("Search WHERE clause: " . implode(' AND ', $where));
         }
 
         $sql .= ' GROUP BY a.id';
@@ -289,6 +359,8 @@ class Article extends Model
         return $stmt->execute([self::STATUS_DRAFT, $id]);
     }
 
+    
+
     /**
      * Get featured articles (most viewed published articles)
      */
@@ -322,6 +394,57 @@ class Article extends Model
     }
 
     /**
+     * Find related articles based on category and tags
+     */
+    public function findRelated(int $articleId, ?int $categoryId, int $limit = 4): array
+    {
+        try {
+            // Bắt đầu với truy vấn cơ bản
+            $sql = $this->buildBaseQuery();
+            $params = [self::STATUS_PUBLISHED, $articleId];
+            
+            if ($categoryId) {
+                // Ưu tiên bài viết cùng danh mục
+                $sql .= ' WHERE a.status = ? AND a.id != ? AND (
+                    a.category_id = ? OR 
+                    EXISTS (
+                        SELECT 1 FROM article_tags at1 
+                        JOIN article_tags at2 ON at1.tag_id = at2.tag_id 
+                        WHERE at1.article_id = a.id AND at2.article_id = ?
+                    )
+                )';
+                $params[] = $categoryId;
+                $params[] = $articleId;
+            } else {
+                // Nếu không có danh mục, chỉ dựa vào tags
+                $sql .= ' WHERE a.status = ? AND a.id != ? AND EXISTS (
+                    SELECT 1 FROM article_tags at1 
+                    JOIN article_tags at2 ON at1.tag_id = at2.tag_id 
+                    WHERE at1.article_id = a.id AND at2.article_id = ?
+                )';
+                $params[] = $articleId;
+            }
+
+            $sql .= ' GROUP BY a.id ORDER BY 
+                     CASE WHEN a.category_id = ? THEN 1 ELSE 2 END,
+                     a.views DESC, 
+                     a.created_at DESC 
+                     LIMIT ?';
+            
+            $params[] = $categoryId ?? 0;
+            $params[] = $limit;
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (\PDOException $e) {
+            error_log("Error finding related articles: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Get recent articles by user (including drafts)
      */
     public function getByUser(int $userId, int $limit = 10, int $offset = 0): array
@@ -338,33 +461,6 @@ class Article extends Model
     public function recent(int $limit = 10): array
     {
         return $this->search(['status' => self::STATUS_PUBLISHED], $limit, 0);
-    }
-
-    /**
-     * Create a new article
-     */
-    public function create(array $data): int
-    {
-        $stmt = $this->db->prepare('INSERT INTO articles (
-            title, slug, content, user_id, category_id, status
-        ) VALUES (?, ?, ?, ?, ?, ?)');
-
-        $stmt->execute([
-            $data['title'],
-            $data['slug'],
-            $data['content'],
-            $data['user_id'],
-            $data['category_id'] ?? null,
-            $data['status'] ?? self::STATUS_DRAFT
-        ]);
-
-        $articleId = (int)$this->db->lastInsertId();
-
-        if (!empty($data['tags'])) {
-            $this->saveTags($articleId, $data['tags']);
-        }
-
-        return $articleId;
     }
 
     /**

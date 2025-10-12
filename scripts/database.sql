@@ -87,6 +87,15 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 -- Seed roles
 INSERT IGNORE INTO roles (name) VALUES ('user'), ('editor'), ('admin');
 
+-- Password Reset Tokens
+CREATE TABLE IF NOT EXISTS password_resets (
+  email VARCHAR(150) NOT NULL,
+  token VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_token (token),
+  KEY idx_email (email)
+) ENGINE=InnoDB;
+
 -- Seed admin user (password: admin123)
 INSERT INTO users (name, email, password_hash, role_id)
 VALUES ('Admin', 'admin@example.com', '$2y$10$2gH0mB9VwGQz0QKk7s3QWuQy6VhKMpa8t0XKy1kI8s2lYo0a2bK9K', 3)

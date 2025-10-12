@@ -7,16 +7,18 @@ use App\Core\Auth;
 use App\Core\CSRF;
 use App\Core\ActivityLogger;
 use App\Core\LoginAttempt;
+use App\Core\Mailer;
 use App\Models\User;
 
 class AuthController extends Controller
 {
+
     public function login(): void
     {
         // Kiểm tra xem có token "remember me" không
         if (!Auth::check() && ($user = Auth::checkRememberToken())) {
             Auth::login($user);
-            ActivityLogger::log('login', null, 'Auto login via remember token');
+            ActivityLogger::log('login', null, 'Tự động đăng nhập bằng token ghi nhớ');
             header('Location: ' . BASE_URL . '/');
             exit;
         }
@@ -88,7 +90,7 @@ class AuthController extends Controller
         Auth::login($userData, $remember);
         
         // Ghi nhận hoạt động
-        ActivityLogger::log('login', null, $remember ? 'Login with remember me' : 'Normal login');
+        ActivityLogger::log('login', null, $remember ? 'Đăng nhập với ghi nhớ' : 'Đăng nhập thường');
         
         // Chuyển hướng người dùng
         $returnUrl = Session::get('return_url', BASE_URL . '/');
@@ -144,6 +146,148 @@ class AuthController extends Controller
             'csrf' => CSRF::token(),
             'csrf' => CSRF::token(),
         ]);
+    }
+
+    /**
+     * Show forgot password form
+     */
+    public function forgotPassword(): void
+    {
+        if (Auth::check()) {
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        $this->view('auth/forgot-password', [
+            'title' => 'Quên mật khẩu',
+            'csrf' => CSRF::token()
+        ]);
+    }
+
+    /**
+     * Process forgot password request
+     */
+    public function processForgotPassword(): void
+    {
+        if (!CSRF::validate($_POST['csrf'] ?? '')) {
+            Session::flash('error', 'Phiên làm việc đã hết hạn, vui lòng thử lại');
+            header('Location: ' . BASE_URL . '/auth/forgot-password');
+            exit;
+        }
+
+        $email = trim(strtolower($_POST['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Session::flash('error', 'Email không hợp lệ');
+            header('Location: ' . BASE_URL . '/auth/forgot-password');
+            exit;
+        }
+
+        // Tạo token đặt lại mật khẩu
+        $token = Auth::createPasswordResetToken($email);
+        if ($token === null) {
+            // Không hiển thị lỗi cụ thể để tránh lộ thông tin
+            Session::flash('success', 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.');
+            header('Location: ' . BASE_URL . '/auth/forgot-password');
+            exit;
+        }
+
+        // Tạo link đặt lại mật khẩu
+        $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'];
+        $resetLink = $scheme . '://' . $host . BASE_URL . '/auth/reset-password/' . urlencode($token);
+        
+        // Gửi email
+        if (Mailer::sendPasswordReset($email, $resetLink)) {
+            Session::flash('success', 'Email hướng dẫn đặt lại mật khẩu đã được gửi.');
+        } else {
+            Session::flash('error', 'Không thể gửi email. Vui lòng thử lại sau.');
+            error_log("Failed to send password reset email to: $email");
+        }
+
+        header('Location: ' . BASE_URL . '/auth/forgot-password');
+        exit;
+    }
+
+    /**
+     * Show reset password form
+     */
+    public function resetPassword(string $token): void
+    {
+        error_log("Reset password request received with token: " . $token);
+        
+        // Decode URL-encoded token
+        $token = urldecode($token);
+        error_log("Decoded token: " . $token);
+        
+        if (!Auth::verifyPasswordResetToken($token)) {
+            error_log("Token verification failed");
+            Session::flash('error', 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+            header('Location: ' . BASE_URL . '/auth/login');
+            exit;
+        }
+        
+        error_log("Token verification successful");
+
+        $this->view('auth/reset-password', [
+            'title' => 'Đặt lại mật khẩu',
+            'token' => $token,
+            'error' => Session::flash('error'),
+            'csrf' => CSRF::token()
+        ]);
+    }
+
+    /**
+     * Process reset password
+     */
+    public function processResetPassword(): void
+    {
+        if (!CSRF::validate($_POST['csrf'] ?? null)) {
+            Session::flash('error', 'Phiên làm việc đã hết hạn, vui lòng thử lại');
+            header('Location: ' . BASE_URL . '/auth/login');
+            exit;
+        }
+
+        $token = $_POST['token'] ?? '';
+        $password = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['password_confirm'] ?? '';
+
+        // Log để debug
+        error_log("Processing reset password request:");
+        error_log("Password length: " . strlen($password));
+        error_log("Confirm password length: " . strlen($confirmPassword));
+        error_log("Raw password: " . $password);
+        error_log("Raw confirm password: " . $confirmPassword);
+
+        // Kiểm tra mật khẩu
+        if (!$this->isStrongPassword($password)) {
+            Session::flash('error', 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt');
+            header('Location: ' . BASE_URL . '/auth/reset-password/' . urlencode($token));
+            exit;
+        }
+
+        // Trim để loại bỏ khoảng trắng thừa
+        $password = trim($password);
+        $confirmPassword = trim($confirmPassword);
+
+        if ($password !== $confirmPassword) {
+            error_log("Password mismatch detected:");
+            error_log("Password: " . $password);
+            error_log("Confirm password: " . $confirmPassword);
+            Session::flash('error', 'Mật khẩu xác nhận không khớp');
+            header('Location: ' . BASE_URL . '/auth/reset-password/' . urlencode($token));
+            exit;
+        }
+
+        // Đặt lại mật khẩu
+        if (Auth::resetPassword($token, $password)) {
+            Session::flash('success', 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập.');
+            ActivityLogger::log('password_reset', null, 'Password reset successful');
+        } else {
+            Session::flash('error', 'Không thể đặt lại mật khẩu. Liên kết có thể đã hết hạn.');
+        }
+
+        header('Location: ' . BASE_URL . '/auth/login');
+        exit;
     }
 
     public function doRegister(): void

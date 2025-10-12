@@ -1,53 +1,60 @@
-<div class="row justify-content-center my-5">
-  <div class="col-md-6">
-    <div class="card shadow">
-      <div class="card-body p-4">
-        <h2 class="text-center mb-4"><?= htmlspecialchars($title) ?></h2>
-        
-        <?php if (!empty($error)): ?>
-          <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($error) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        <?php endif; ?>
+<div class="auth-wrapper">
+    <div class="auth-container">
+        <div class="card auth-card border-0">
+            <div class="card-body p-4 p-lg-5">
+                <div class="text-center mb-4">
+                    <i class="bi bi-shield-lock display-5 text-primary mb-3"></i>
+                    <h1 class="auth-title h3"><?= htmlspecialchars($title) ?></h1>
+                    <p class="text-muted">Chào mừng bạn trở lại! Vui lòng đăng nhập để tiếp tục.</p>
+                </div>
 
-        <?php if (!empty($success)): ?>
-          <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($success) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        <?php endif; ?>
+                <?php if (!empty($error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        <?= htmlspecialchars($error) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
 
-        <form method="post" action="<?= BASE_URL ?>/auth/login" id="loginForm">
+                <?php if (!empty($success)): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <?= htmlspecialchars($success) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+        <form method="post" action="<?= BASE_URL ?>/auth/login" id="loginForm" class="auth-form">
           <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
           
-          <div class="mb-3">
-            <label class="form-label">Email</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-              <input type="email" name="email" class="form-control" required
-                     value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
-                     placeholder="Email của bạn">
-            </div>
-          </div>
+                <div class="form-floating mb-4">
+                    <div class="auth-input-group">
+                        <span class="auth-input-icon"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" class="form-control form-control-lg ps-5" required
+                               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                               placeholder="Email của bạn">
+                    </div>
+                </div>
 
-          <div class="mb-3">
-            <label class="form-label">Mật khẩu</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-key"></i></span>
-              <input type="password" name="password" class="form-control" required
-                     id="password" placeholder="Mật khẩu của bạn">
-              <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                <i class="bi bi-eye"></i>
-              </button>
-            </div>
-          </div>
+                <div class="form-floating mb-4">
+                    <div class="auth-input-group">
+                        <span class="auth-input-icon"><i class="bi bi-key"></i></span>
+                        <input type="password" name="password" class="form-control form-control-lg ps-5" required
+                               id="password" placeholder="Mật khẩu của bạn">
+                        <button class="auth-input-action" type="button" id="togglePassword">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
 
-          <div class="mb-3 d-flex justify-content-between align-items-center">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" name="remember" id="remember">
-              <label class="form-check-label" for="remember">Ghi nhớ đăng nhập</label>
-            </div>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="remember" id="remember">
+                        <label class="form-check-label" for="remember">Ghi nhớ đăng nhập</label>
+                    </div>
+            <a href="<?= BASE_URL ?>/auth/forgot-password" class="text-decoration-none">
+              Quên mật khẩu?
+            </a>
             <a href="<?= BASE_URL ?>/auth/forgot-password" class="text-decoration-none">Quên mật khẩu?</a>
           </div>
 
@@ -74,25 +81,16 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Xử lý ẩn/hiện mật khẩu
-    const togglePassword = document.getElementById('togglePassword');
-    const password = document.getElementById('password');
-    
-    togglePassword.addEventListener('click', function() {
-        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-        password.setAttribute('type', type);
-        this.querySelector('i').classList.toggle('bi-eye');
-        this.querySelector('i').classList.toggle('bi-eye-slash');
-    });
-
     // Ngăn chặn việc submit form nhiều lần
     const form = document.getElementById('loginForm');
     const loginBtn = document.getElementById('loginBtn');
     
-    form.addEventListener('submit', function() {
-        loginBtn.disabled = true;
-        loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang đăng nhập...';
-    });
+    if (form && loginBtn) {
+        form.addEventListener('submit', function() {
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang đăng nhập...';
+        });
+    }
 });
 </script>
 

@@ -12,6 +12,9 @@ define('APP_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'app');
 define('CONFIG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'config');
 define('PUBLIC_PATH', __DIR__);
 
+// Load Composer's autoloader
+require_once BASE_PATH . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+
 // Load config
 require_once CONFIG_PATH . DIRECTORY_SEPARATOR . 'config.php';
 
@@ -41,6 +44,17 @@ $router = new Router();
 // Web routes
 $router->get('/', 'HomeController@index');
 
+// Authentication routes
+$router->get('/auth/login', 'AuthController@login');
+$router->post('/auth/login', 'AuthController@doLogin');
+$router->get('/auth/register', 'AuthController@register');
+$router->post('/auth/register', 'AuthController@doRegister');
+$router->get('/auth/logout', 'AuthController@logout');
+$router->get('/auth/forgot-password', 'AuthController@forgotPassword');
+$router->post('/auth/forgot-password', 'AuthController@processForgotPassword');
+$router->get('/auth/reset-password/:token', 'AuthController@resetPassword');
+$router->post('/auth/reset-password', 'AuthController@processResetPassword');
+
 // Trang chủ bài viết
 $router->get('/articles', 'ArticleController@index');
 $router->get('/articles/search', 'ArticleController@search');
@@ -65,12 +79,7 @@ $router->post('/article/:id/publish', 'ArticleController@publish');
 $router->post('/article/:id/unpublish', 'ArticleController@unpublish');
 $router->post('/article/:id/save-draft', 'ArticleController@saveDraft');
 
-// Authentication
-$router->get('/auth/login', 'AuthController@login');
-$router->post('/auth/login', 'AuthController@doLogin');
-$router->get('/auth/logout', 'AuthController@logout');
-$router->get('/auth/register', 'AuthController@register');
-$router->post('/auth/register', 'AuthController@doRegister');
+
 
 // Admin routes
 $router->get('/admin/dashboard', 'AdminController@index');

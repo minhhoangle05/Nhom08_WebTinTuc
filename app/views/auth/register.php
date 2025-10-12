@@ -1,10 +1,21 @@
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <h2><?= htmlspecialchars($title) ?></h2>
-    <?php if (!empty($error)): ?>
-      <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-    <form method="post" action="<?= BASE_URL ?>/auth/register">
+<div class="auth-wrapper">
+    <div class="auth-container">
+        <div class="card auth-card border-0">
+            <div class="card-body p-4 p-lg-5">
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-plus display-5 text-primary mb-3"></i>
+                    <h1 class="auth-title h3"><?= htmlspecialchars($title) ?></h1>
+                    <p class="text-muted">Tạo tài khoản mới để tham gia cộng đồng của chúng tôi.</p>
+                </div>
+
+                <?php if (!empty($error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        <?= htmlspecialchars($error) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+        <form method="post" action="<?= BASE_URL ?>/auth/register" class="auth-form">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
       <div class="mb-3">
         <label class="form-label">Họ tên <span class="text-danger">*</span></label>

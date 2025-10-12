@@ -28,6 +28,23 @@ class Category extends Model
     }
 
     /**
+     * Get popular categories based on the number of articles
+     */
+    public function getPopularCategories(int $limit = 5): array
+    {
+        $stmt = $this->db->prepare('
+            SELECT c.*, COUNT(a.id) as article_count 
+            FROM categories c
+            LEFT JOIN articles a ON c.id = a.category_id
+            GROUP BY c.id
+            ORDER BY article_count DESC
+            LIMIT ?
+        ');
+        $stmt->execute([$limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Find category by slug
      */
     public function findBySlug(string $slug): ?array
