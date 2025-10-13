@@ -1,46 +1,36 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title ?? 'Bài viết') ?></title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px 0; margin-bottom: 30px; }
-        header h1 { font-size: 2rem; color: #2c3e50; }
-        .content { display: grid; grid-template-columns: 1fr 300px; gap: 30px; }
-        .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .article-card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s; }
-        .article-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .article-image { width: 100%; height: 200px; object-fit: cover; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .article-content { padding: 20px; }
-        .article-title { font-size: 1.25rem; margin-bottom: 10px; color: #2c3e50; }
-        .article-title a { text-decoration: none; color: inherit; }
-        .article-title a:hover { color: #667eea; }
-        .article-meta { font-size: 0.875rem; color: #7f8c8d; margin-bottom: 10px; }
-        .article-summary { color: #555; line-height: 1.6; }
-        .sidebar { background: #fff; border-radius: 8px; padding: 20px; height: fit-content; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .sidebar h3 { margin-bottom: 15px; color: #2c3e50; }
-        .category-list { list-style: none; }
-        .category-list li { padding: 8px 0; border-bottom: 1px solid #ecf0f1; }
-        .category-list li:last-child { border-bottom: none; }
-        .category-list a { text-decoration: none; color: #555; display: flex; justify-content: space-between; }
-        .category-list a:hover { color: #667eea; }
-        .category-list a.active { color: #667eea; font-weight: 600; }
-        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 30px; }
-        .pagination a, .pagination span { padding: 8px 16px; background: #fff; border-radius: 4px; text-decoration: none; color: #555; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .pagination a:hover { background: #667eea; color: #fff; }
-        .pagination .current { background: #667eea; color: #fff; }
-        .no-articles { text-align: center; padding: 60px 20px; background: #fff; border-radius: 8px; }
-        @media (max-width: 768px) {
-            .content { grid-template-columns: 1fr; }
-            .articles-grid { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
+
+<style>
+    /* Style cho articles page - có thể move vào style.css */
+    .articles-content { display: grid; grid-template-columns: 1fr 300px; gap: 30px; }
+    .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .article-card { background: var(--bs-body-bg); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s; }
+    .article-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .article-image { width: 100%; height: 200px; object-fit: cover; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .article-content { padding: 20px; }
+    .article-title { font-size: 1.25rem; margin-bottom: 10px; color: var(--bs-body-color); }
+    .article-title a { text-decoration: none; color: inherit; }
+    .article-title a:hover { color: #667eea; }
+    .article-meta { font-size: 0.875rem; color: #7f8c8d; margin-bottom: 10px; }
+    .article-summary { color: #555; line-height: 1.6; }
+    .articles-sidebar { background: var(--bs-body-bg); border-radius: 8px; padding: 20px; height: fit-content; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .articles-sidebar h3 { margin-bottom: 15px; color: var(--bs-body-color); }
+    .category-list { list-style: none; padding: 0; }
+    .category-list li { padding: 8px 0; border-bottom: 1px solid var(--bs-border-color); }
+    .category-list li:last-child { border-bottom: none; }
+    .category-list a { text-decoration: none; color: var(--bs-body-color); display: flex; justify-content: space-between; }
+    .category-list a:hover { color: #667eea; }
+    .category-list a.active { color: #667eea; font-weight: 600; }
+    .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 30px; }
+    .pagination a, .pagination span { padding: 8px 16px; background: var(--bs-body-bg); border-radius: 4px; text-decoration: none; color: var(--bs-body-color); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .pagination a:hover { background: #667eea; color: #fff; }
+    .pagination .current { background: #667eea; color: #fff; }
+    .no-articles { text-align: center; padding: 60px 20px; background: var(--bs-body-bg); border-radius: 8px; }
+    
+    @media (max-width: 768px) {
+        .articles-content { grid-template-columns: 1fr; }
+        .articles-grid { grid-template-columns: 1fr; }
+    }
+</style>
     <header>
         <div class="container">
             <h1><?= htmlspecialchars($title) ?></h1>
@@ -48,8 +38,8 @@
     </header>
 
     <div class="container">
-        <div class="content">
-            <main>
+        <div class="articles-content">
+            <div class="articles-main">
                 <?php if (empty($articles)): ?>
                     <div class="no-articles">
                         <h2>Chưa có bài viết nào</h2>
@@ -108,7 +98,7 @@
                         </div>
                     <?php endif; ?>
                 <?php endif; ?>
-            </main>
+            </div>
 
             <aside class="sidebar">
                 <h3>Danh mục</h3>
@@ -130,5 +120,6 @@
             </aside>
         </div>
     </div>
-</body>
-</html>
+
+    <?php require BASE_PATH . '/app/views/layouts/footer.php'; ?>
+

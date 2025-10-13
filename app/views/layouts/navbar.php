@@ -40,7 +40,7 @@
                             <?= htmlspecialchars(App\Core\Auth::user()['name']) ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/profile">Tài khoản</a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/account/profile">Tài khoản</a></li>
                             <li><a class="dropdown-item" href="<?= BASE_URL ?>/articles/drafts">Bài nháp</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="<?= BASE_URL ?>/auth/logout">Đăng xuất</a></li>

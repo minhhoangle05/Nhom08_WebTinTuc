@@ -1,3 +1,66 @@
+/* ========================================
+   STICKY FOOTER FIX - MUST BE AT TOP
+   ======================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar không grow */
+body > .navbar,
+body > nav {
+    flex: 0 0 auto !important;
+}
+
+/* Main PHẢI grow để đẩy footer xuống */
+body > main,
+body > .site-main,
+main.site-main,
+main.flex-grow-1 {
+    flex: 1 0 auto !important;
+    width: 100%;
+    position: relative !important; /* KHÔNG được absolute */
+}
+
+/* Footer KHÔNG được grow */
+body > footer,
+body > .footer,
+footer.footer {
+    flex: 0 0 auto !important;
+    width: 100%;
+    margin-top: 0 !important; /* Xóa mt-auto của Bootstrap */
+}
+
+/* Kill bất kỳ absolute positioning nào trong main */
+main * {
+    position: relative !important;
+}
+
+main .hero-section,
+main .container,
+main .container-fluid,
+main section {
+    position: relative !important;
+}
+
+/* Chỉ cho phép sticky cho sidebar */
+.sticky-sidebar {
+    position: sticky !important;
+}
+
+/* ======================================== */
 :root {
     /* Color system */
     --primary-color: #2563eb;
@@ -21,12 +84,35 @@
     --ease-base: cubic-bezier(.4,0,.2,1);
 }
 
-html { scroll-behavior: smooth; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; }
+html { scroll-behavior: smooth; height:100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; height:100%; }
+body.d-flex {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh;
+}
 
+body.d-flex .site-main {
+    flex: 1 0 auto; /* Cho phép main tự động co giãn */
+}
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+body.d-flex .footer {
+    flex-shrink: 0; /* Footer không bị co lại */
+    margin-top: auto; /* Luôn dính dưới cùng */
+}
 /* Smooth theme transitions */
-*, *::before, *::after { transition: background-color .4s cubic-bezier(.4,0,.2,1), color .4s cubic-bezier(.4,0,.2,1), border-color .4s cubic-bezier(.4,0,.2,1), box-shadow .4s cubic-bezier(.4,0,.2,1); }
-
+/* Không apply transition cho layout properties */
+*, *::before, *::after { 
+    transition: background-color .4s cubic-bezier(.4,0,.2,1), 
+                color .4s cubic-bezier(.4,0,.2,1), 
+                border-color .4s cubic-bezier(.4,0,.2,1), 
+                box-shadow .4s cubic-bezier(.4,0,.2,1); 
+    /* KHÔNG transition cho position, display, flex */
+}
 /* Animations */
 .fade-in { opacity:0; transform: translateY(30px); transition: all .6s ease; }
 .fade-in.visible { opacity:1; transform:none; }
@@ -40,7 +126,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line
 .hero-section { background: linear-gradient(135deg, var(--primary-color), #1e40af); color: #fff; padding:100px 0; margin-bottom:50px; }
 [data-bs-theme="dark"] .hero-section { background: linear-gradient(135deg, #1e293b, #0f172a); }
 
-.navbar { transition: background-color .5s cubic-bezier(.4,0,.2,1), border-color .5s cubic-bezier(.4,0,.2,1) !important; }
+.navbar { transition: background-color .5s cubic-bezier(.4,0,.2,1), border-color .5s cubic-bezier(.4,0,.2,1) !important; flex-shrink: 0;}
 .navbar-brand { color: var(--primary-color) !important; font-weight:700; }
 [data-bs-theme="dark"] .navbar { background-color: var(--bs-gray-900) !important; border-bottom:1px solid var(--bs-gray-700); }
 
@@ -283,30 +369,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line
 /* Cards & lists */
 .article-card { transition: transform .3s ease, box-shadow .3s ease, background-color .4s cubic-bezier(.4,0,.2,1), border-color .4s cubic-bezier(.4,0,.2,1); border:none; border-radius:12px; overflow:hidden; height:100%; }
 .article-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,.1); }
-.article-image { height:200px; width:100%; object-fit: cover; }
+.article-image { height:180px; width:100%; object-fit: cover; }
 .category-badge { background: var(--accent-color); color:#fff; padding:4px 12px; border-radius:20px; font-size:.8rem; font-weight:500; }
 .sidebar-widget { background: var(--bs-gray-50); border-radius:12px; padding:25px; margin-bottom:30px; transition: background-color .4s cubic-bezier(.4,0,.2,1), border-color .4s cubic-bezier(.4,0,.2,1); }
 [data-bs-theme="dark"] .sidebar-widget { background: var(--bs-gray-800); }
 .comment-item { border-left:3px solid var(--primary-color); padding-left:20px; margin-bottom:25px; }
 
-/* Footer */
-.footer { background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%); color: #e2e8f0; margin-top:80px; position:relative; overflow:hidden; }
-.footer::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background: linear-gradient(90deg, transparent, #4a5568, transparent); }
-.footer a { color:#cbd5e0 !important; transition: color .3s ease; }
-.footer a:hover { color:#ffffff !important; }
-/* Improve contrast for footer text */
-.footer p, .footer li, .footer .text-muted { color:#e2e8f0 !important; }
-.social-links a { display:inline-block; width:40px; height:40px; border-radius:50%; text-align:center; line-height:40px; background:#6b7280; color:#fff; margin:0 5px; position:relative; overflow:hidden; transition: all .4s cubic-bezier(.4,0,.2,1); }
-.social-links a::before { content:''; position:absolute; inset:0; border-radius:50%; transform: scale(0); transition: transform .4s cubic-bezier(.4,0,.2,1); z-index:0; }
-.social-links a i { position:relative; z-index:1; transition: transform .3s ease; }
-.social-links a:hover { transform: translateY(-3px) scale(1.1); box-shadow: 0 8px 20px rgba(0,0,0,.3); }
-.social-links a:hover::before { transform: scale(1); }
-.social-links a:hover i { transform: scale(1.1); }
-/* Brand colors */
-.social-links a:nth-child(1)::before { background:#1877f2; }
-.social-links a:nth-child(2)::before { background:#1da1f2; }
-.social-links a:nth-child(3)::before { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
-.social-links a:nth-child(4)::before { background:#0077b5; }
+/* Footer (new minimal styles; layout handled above) */
+.footer { flex-shrink: 0; }
+.footer a.text-muted { transition: color .2s ease; }
+.footer a.text-muted:hover { color: #ffffff !important; }
 
 /* Theme toggle */
 .theme-toggle { background:none; border:1px solid var(--bs-border-color); border-radius:50px; padding:8px 12px; cursor:pointer; transition: all .3s ease; }
@@ -472,6 +544,15 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line
         right: 15px;
     }
 }
+
+/* Layout spacing to keep content clear of footer */
+.site-main {
+    flex: 1 0 auto; /* Giãn ra để chiếm hết không gian còn lại */
+    padding-bottom: 48px;
+}
+
+/* Slightly tighter cards grid spacing if used */
+.row .col, .row > [class^="col-"] { margin-bottom: 16px; }
 
 /* Dark mode improvements */
 [data-bs-theme="dark"] .loading-spinner {

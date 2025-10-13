@@ -58,6 +58,7 @@ $router->post('/auth/reset-password', 'AuthController@processResetPassword');
 // Trang chủ bài viết
 $router->get('/articles', 'ArticleController@index');
 $router->get('/articles/search', 'ArticleController@search');
+$router->get('/articles/mine', 'ArticleController@myArticles');
 
 // Quản lý bài viết
 $router->get('/articles/create', 'ArticleController@create');
@@ -66,6 +67,7 @@ $router->get('/article/:slug', 'ArticleController@show');
 $router->get('/article/:id/edit', 'ArticleController@edit');
 $router->put('/article/:id', 'ArticleController@update');
 $router->delete('/article/:id', 'ArticleController@delete');
+$router->post('/article/:id/delete', 'ArticleController@delete');
 
 // Preview và bản nháp
 $router->get('/article/preview/:id', 'ArticleController@preview');
@@ -84,6 +86,10 @@ $router->post('/article/:id/save-draft', 'ArticleController@saveDraft');
 // Admin routes
 $router->get('/admin/dashboard', 'AdminController@index');
 $router->get('/admin', 'AdminController@index'); // Redirect from /admin to /admin/dashboard
+
+// Account / Profile
+$router->get('/account/profile', 'ProfileController@show');
+$router->post('/account/profile', 'ProfileController@update');
 
 // Dispatch request
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

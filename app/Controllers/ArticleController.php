@@ -68,6 +68,74 @@ class ArticleController extends Controller
         ]);
     }
 
+    public function myArticles(): void
+    {
+        if (!Auth::check()) {
+            header('Location: ' . BASE_URL . '/auth/login');
+            exit;
+        }
+
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $filters = [
+            'user_id' => Auth::user()['id'],
+            'status' => 'all',
+            'sort' => $_GET['sort'] ?? 'updated'
+        ];
+
+        $articles = $this->articleModel->search($filters, $limit, $offset);
+        $total = $this->articleModel->countSearch($filters);
+        $totalPages = (int)ceil($total / $limit);
+
+        $this->view('articles/mine', [
+            'title' => 'Bài viết của tôi',
+            'articles' => $articles,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'total' => $total,
+            'csrf' => CSRF::token(),
+        ]);
+    }
+
+    public function delete(int $id): void
+    {
+        if (!Auth::check()) {
+            http_response_code(401);
+            echo 'Unauthorized';
+            return;
+        }
+
+        if (!CSRF::validate($_POST['csrf'] ?? null)) {
+            http_response_code(400);
+            echo 'Invalid CSRF token';
+            return;
+        }
+
+        $article = $this->articleModel->findById($id);
+        if (!$article) {
+            http_response_code(404);
+            echo 'Không tìm thấy bài viết';
+            return;
+        }
+
+        if (!Auth::isAdmin() && Auth::user()['id'] !== $article['user_id']) {
+            http_response_code(403);
+            echo 'Bạn không có quyền xóa bài viết này';
+            return;
+        }
+
+        if ($this->articleModel->delete($id)) {
+            ActivityLogger::log('article_delete', $id);
+            header('Location: ' . BASE_URL . '/articles/mine');
+            return;
+        }
+
+        http_response_code(500);
+        echo 'Xóa bài viết thất bại';
+    }
+
     public function search(): void
     {
         $page = max(1, (int)($_GET['page'] ?? 1));
