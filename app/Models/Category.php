@@ -63,7 +63,7 @@ class Category extends Model
         $stmt = $this->db->query('
             SELECT c.*, COUNT(a.id) as article_count
             FROM categories c
-            LEFT JOIN articles a ON c.id = a.category_id AND a.status = "published"
+            LEFT JOIN articles a ON c.id = a.category_id
             GROUP BY c.id
             ORDER BY c.name
         ');

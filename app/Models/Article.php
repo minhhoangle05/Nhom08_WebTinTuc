@@ -7,9 +7,6 @@ use PDO;
 
 class Article extends Model
 {
-    const STATUS_DRAFT = 'draft';
-    const STATUS_PUBLISHED = 'published';
-    const STATUS_PRIVATE = 'private';
 
     /**
      * Build the base SQL query with all necessary joins
@@ -22,6 +19,11 @@ class Article extends Model
         try {
             $this->db->beginTransaction();
 
+            // Validate slug uniqueness
+            if ($this->slugExists($data['slug'])) {
+                throw new \Exception('Slug đã tồn tại, vui lòng chọn slug khác');
+            }
+
             // 1. Insert article
             $stmt = $this->db->prepare('
                 INSERT INTO articles (
@@ -30,8 +32,8 @@ class Article extends Model
                     content,
                     summary,
                     user_id, 
-                    category_id, 
-                    status,
+                    category_id,
+                    featured_image,
                     created_at,
                     updated_at
                 ) VALUES (
@@ -41,7 +43,7 @@ class Article extends Model
                     :summary,
                     :user_id,
                     :category_id,
-                    :status,
+                    :featured_image,
                     NOW(),
                     NOW()
                 )
@@ -54,7 +56,7 @@ class Article extends Model
                 ':summary' => $data['summary'] ?? null,
                 ':user_id' => $data['user_id'],
                 ':category_id' => $data['category_id'],
-                ':status' => self::STATUS_PUBLISHED
+                ':featured_image' => $data['featured_image'] ?? null
             ]);
 
             $articleId = (int)$this->db->lastInsertId();
@@ -129,21 +131,7 @@ class Article extends Model
             error_log("Adding search term condition: " . $params['q']);
         }
 
-        // Status filter
-        if (isset($params['status'])) {
-            if ($params['status'] === 'all') {
-                error_log("No status filter applied");
-            } else {
-                $where[] = 'a.status = ?';
-                $values[] = $params['status'];
-                error_log("Adding status condition: " . $params['status']);
-            }
-        } else if (!isset($params['include_drafts'])) {
-            // Default: only show published articles for public views
-            $where[] = 'a.status = ?';
-            $values[] = self::STATUS_PUBLISHED;
-            error_log("Adding default published status condition");
-        }
+        // Không cần filter status nữa vì tất cả bài viết đều là published
 
         if (!empty($params['user_id'])) {
             $where[] = 'a.user_id = ?';
@@ -234,11 +222,11 @@ class Article extends Model
     }
 
     /**
-     * Get all published articles with pagination
+     * Get all articles with pagination
      */
     public function all(int $limit = 10, int $offset = 0): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, $offset);
+        return $this->search([], $limit, $offset);
     }
 
     /**
@@ -255,8 +243,7 @@ class Article extends Model
     public function findByCategory(int $categoryId, int $limit = 10, int $offset = 0): array
     {
         return $this->search([
-            'category_id' => $categoryId,
-            'status' => self::STATUS_PUBLISHED
+            'category_id' => $categoryId
         ], $limit, $offset);
     }
 
@@ -266,8 +253,7 @@ class Article extends Model
     public function findByCategorySlug(string $categorySlug, int $limit = 10, int $offset = 0): array
     {
         return $this->search([
-            'category_slug' => $categorySlug,
-            'status' => self::STATUS_PUBLISHED
+            'category_slug' => $categorySlug
         ], $limit, $offset);
     }
 
@@ -312,68 +298,21 @@ class Article extends Model
         return $article ?: null;
     }
 
-    /**
-     * Get user's draft articles
-     */
-    public function getUserDrafts(int $userId, int $limit = 50, int $offset = 0): array
-    {
-        return $this->search([
-            'user_id' => $userId,
-            'status' => self::STATUS_DRAFT,
-            'include_drafts' => true
-        ], $limit, $offset);
-    }
-
-    /**
-     * Get a draft by ID
-     */
-    public function getDraft(int $id): ?array
-    {
-        return $this->findById($id);
-    }
-
-    /**
-     * Publish an article
-     */
-    public function publish(int $id): bool
-    {
-        $stmt = $this->db->prepare('UPDATE articles SET status = ?, updated_at = NOW() WHERE id = ?');
-        return $stmt->execute([self::STATUS_PUBLISHED, $id]);
-    }
-
-    /**
-     * Unpublish an article (set to draft)
-     */
-    public function unpublish(int $id): bool
-    {
-        $stmt = $this->db->prepare('UPDATE articles SET status = ?, updated_at = NOW() WHERE id = ?');
-        return $stmt->execute([self::STATUS_DRAFT, $id]);
-    }
-
-    /**
-     * Save article as draft
-     */
-    public function saveDraft(int $id): bool
-    {
-        $stmt = $this->db->prepare('UPDATE articles SET status = ?, updated_at = NOW() WHERE id = ?');
-        return $stmt->execute([self::STATUS_DRAFT, $id]);
-    }
 
     
 
     /**
-     * Get featured articles (most viewed published articles)
+     * Get featured articles (most viewed articles)
      */
     public function featuredToday(int $limit = 6): array
     {
         $sql = $this->buildBaseQuery();
-        $sql .= ' WHERE a.status = ?
-                  GROUP BY a.id
+        $sql .= ' GROUP BY a.id
                   ORDER BY a.views DESC, a.created_at DESC
                   LIMIT ?';
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([self::STATUS_PUBLISHED, $limit]);
+        $stmt->execute([$limit]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -382,15 +321,15 @@ class Article extends Model
      */
     public function popular(int $limit = 5): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, 0);
+        return $this->search([], $limit, 0);
     }
 
     /**
-     * Get latest published articles
+     * Get latest articles
      */
     public function latest(int $limit = 10): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, 0);
+        return $this->search([], $limit, 0);
     }
 
     /**
@@ -401,11 +340,11 @@ class Article extends Model
         try {
             // Bắt đầu với truy vấn cơ bản
             $sql = $this->buildBaseQuery();
-            $params = [self::STATUS_PUBLISHED, $articleId];
+            $params = [$articleId];
             
             if ($categoryId) {
                 // Ưu tiên bài viết cùng danh mục
-                $sql .= ' WHERE a.status = ? AND a.id != ? AND (
+                $sql .= ' WHERE a.id != ? AND (
                     a.category_id = ? OR 
                     EXISTS (
                         SELECT 1 FROM article_tags at1 
@@ -417,7 +356,7 @@ class Article extends Model
                 $params[] = $articleId;
             } else {
                 // Nếu không có danh mục, chỉ dựa vào tags
-                $sql .= ' WHERE a.status = ? AND a.id != ? AND EXISTS (
+                $sql .= ' WHERE a.id != ? AND EXISTS (
                     SELECT 1 FROM article_tags at1 
                     JOIN article_tags at2 ON at1.tag_id = at2.tag_id 
                     WHERE at1.article_id = a.id AND at2.article_id = ?
@@ -445,22 +384,21 @@ class Article extends Model
     }
 
     /**
-     * Get recent articles by user (including drafts)
+     * Get recent articles by user
      */
     public function getByUser(int $userId, int $limit = 10, int $offset = 0): array
     {
         return $this->search([
-            'user_id' => $userId,
-            'status' => 'all'
+            'user_id' => $userId
         ], $limit, $offset);
     }
 
     /**
-     * Get recent published articles
+     * Get recent articles
      */
     public function recent(int $limit = 10): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, 0);
+        return $this->search([], $limit, 0);
     }
 
     /**

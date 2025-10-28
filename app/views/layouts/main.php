@@ -98,6 +98,8 @@ if (!isset($content)) {
   <?= $content ?>
 </main>
 
+<?php include BASE_PATH . '/app/views/layouts/footer.php'; ?>
+
 <!-- Bootstrap and other core JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

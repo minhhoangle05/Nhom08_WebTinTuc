@@ -30,16 +30,16 @@
                 <div class="form-floating mb-4">
                     <div class="auth-input-group">
                         <span class="auth-input-icon"><i class="bi bi-envelope"></i></span>
-                        <input type="email" name="email" class="form-control form-control-lg ps-5" required
+                        <input type="email" name="email" class="form-control form-control-lg" required
                                value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
                                placeholder="Email của bạn">
                     </div>
                 </div>
 
                 <div class="form-floating mb-4">
-                    <div class="auth-input-group">
+                    <div class="auth-input-group has-action">
                         <span class="auth-input-icon"><i class="bi bi-key"></i></span>
-                        <input type="password" name="password" class="form-control form-control-lg ps-5" required
+                        <input type="password" name="password" class="form-control form-control-lg" required
                                id="password" placeholder="Mật khẩu của bạn">
                         <button class="auth-input-action" type="button" id="togglePassword">
                             <i class="bi bi-eye"></i>

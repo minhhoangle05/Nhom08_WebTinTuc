@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Core\CSRF;
 use App\Core\Auth;
 use App\Core\ActivityLogger;
+use App\Core\Session;
 use App\Models\Article;
 use App\Models\Category;
 use App\Models\Tag;
@@ -32,7 +33,6 @@ class ArticleController extends Controller
         $offset = ($page - 1) * $limit;
         
         $filters = [
-            'status' => Article::STATUS_PUBLISHED, // Only show published articles
             'sort' => $sort
         ];
         
@@ -81,7 +81,6 @@ class ArticleController extends Controller
 
         $filters = [
             'user_id' => Auth::user()['id'],
-            'status' => 'all',
             'sort' => $_GET['sort'] ?? 'updated'
         ];
 
@@ -144,8 +143,7 @@ class ArticleController extends Controller
         $filters = [
             'q' => $_GET['q'] ?? null,
             'tag' => $_GET['tag'] ?? null,
-            'sort' => $_GET['sort'] ?? 'latest',
-            'status' => Article::STATUS_PUBLISHED
+            'sort' => $_GET['sort'] ?? 'latest'
         ];
 
         // Nếu có category, lấy thông tin category
@@ -206,85 +204,110 @@ class ArticleController extends Controller
         $categories = $this->categoryModel->all();
         $tags = $this->tagModel->all();
         
-        $this->view('articles/create', [
+        $this->view('articles/create_simple', [
             'title' => 'Tạo bài viết mới',
             'csrf' => CSRF::token(),
             'categories' => $categories,
-            'tags' => $tags
+            'tags' => $tags,
+            'error' => Session::flash('error'),
+            'success' => Session::flash('success'),
+            'oldInput' => Session::flash('oldInput') ?? []
         ]);
     }
 
     public function store(): void
     {
-        try {
-            // 1. Authentication check
-            if (!Auth::check()) {
-                header('Location: ' . BASE_URL . '/auth/login');
-                exit;
-            }
-
-            // 2. CSRF validation
-            $csrf = $_POST['csrf'] ?? null;
-            if (!CSRF::validate($csrf)) {
-                throw new \Exception('Phiên làm việc đã hết hạn, vui lòng thử lại');
-            }
-
-            // 3. Data validation
-            $title = trim($_POST['title'] ?? '');
-            $slug = trim($_POST['slug'] ?? '');
-            $content = trim($_POST['content'] ?? '');
-            $summary = trim($_POST['summary'] ?? '');
-            $categoryId = (int)($_POST['category_id'] ?? 0);
-            $tags = $_POST['tags'] ?? [];
-
-            // Basic validation
-            if (empty($title)) throw new \Exception('Tiêu đề không được để trống');
-            if (empty($content)) throw new \Exception('Nội dung không được để trống');
-            if (empty($slug)) {
-                // Auto-generate slug from title if empty
-                $slug = $this->createSlug($title);
-            }
-        
-        if ($title === '' || $slug === '' || $content === '') {
-            http_response_code(422);
-            echo 'Vui lòng điền đầy đủ thông tin bắt buộc';
-            return;
+        // 1. Authentication check
+        if (!Auth::check()) {
+            header('Location: ' . BASE_URL . '/auth/login');
+            exit;
         }
 
-            // 4. Prepare article data
-            $articleData = [
-                'title' => $title,
-                'slug' => $slug,
-                'content' => $content,
-                'summary' => $summary,
-                'user_id' => Auth::user()['id'],
-                'category_id' => $categoryId ?: null,
-                'tags' => array_filter($tags), // Remove empty values
-            ];
+        // 2. CSRF validation
+        if (!CSRF::validate($_POST['csrf'] ?? null)) {
+            Session::flash('error', 'Phiên làm việc đã hết hạn, vui lòng thử lại');
+            header('Location: ' . BASE_URL . '/articles/create');
+            exit;
+        }
 
-            // 5. Create the article
-            $articleId = $this->articleModel->create($articleData);
+        // 3. Lấy và validate dữ liệu
+        $title = trim($_POST['title'] ?? '');
+        $slug = trim($_POST['slug'] ?? '');
+        $content = trim($_POST['content'] ?? '');
+        $summary = trim($_POST['summary'] ?? '');
+        $categoryId = (int)($_POST['category_id'] ?? 0);
+        $tags = $_POST['tags'] ?? [];
 
-            // 6. Log the activity and redirect
-            if ($articleId) {
-                ActivityLogger::log('article_create', $articleId);
-                header('Location: ' . BASE_URL . '/article/' . rawurlencode($slug));
-                exit;
+        // Validation cơ bản
+        if (empty($title)) {
+            Session::flash('error', 'Tiêu đề không được để trống');
+            Session::flash('oldInput', $_POST);
+            header('Location: ' . BASE_URL . '/articles/create');
+            exit;
+        }
+
+        if (empty($content)) {
+            Session::flash('error', 'Nội dung không được để trống');
+            Session::flash('oldInput', $_POST);
+            header('Location: ' . BASE_URL . '/articles/create');
+            exit;
+        }
+
+        // Tự động tạo slug nếu để trống
+        if (empty($slug)) {
+            $slug = $this->createSlug($title);
+        }
+
+        // 4. Chuẩn bị dữ liệu bài viết
+        $articleData = [
+            'title' => $title,
+            'slug' => $slug,
+            'content' => $content,
+            'summary' => $summary,
+            'user_id' => Auth::user()['id'],
+            'category_id' => $categoryId ?: null,
+            'tags' => array_filter($tags), // Loại bỏ giá trị rỗng
+        ];
+
+        // 4.1 Xử lý upload ảnh đại diện nếu có
+        if (isset($_FILES['featured_image']) && isset($_FILES['featured_image']['tmp_name']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = BASE_PATH . '/public/uploads/articles/';
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0775, true);
             }
 
+            $originalName = $_FILES['featured_image']['name'] ?? '';
+            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            $allowed = ['jpg','jpeg','png','gif','webp'];
+            if (in_array($ext, $allowed, true)) {
+                $safeBase = preg_replace('/[^a-z0-9\-_.]/i', '-', pathinfo($originalName, PATHINFO_FILENAME));
+                $fileName = uniqid('img_', true) . '-' . trim($safeBase, '-') . '.' . $ext;
+                $targetPath = $uploadDir . $fileName;
+                if (@move_uploaded_file($_FILES['featured_image']['tmp_name'], $targetPath)) {
+                    $articleData['featured_image'] = $fileName; // Lưu chỉ tên file để tạo URL ổn định khi deploy
+                }
+            }
+        }
+
+        // 5. Tạo bài viết
+        try {
+            $articleId = $this->articleModel->create($articleData);
+            
+            if ($articleId) {
+                ActivityLogger::log('article_create', $articleId);
+                Session::flash('success', 'Bài viết đã được tạo thành công!');
+                header('Location: ' . BASE_URL . '/article/' . rawurlencode($slug));
+                exit;
+            } else {
+                throw new \Exception('Không thể tạo bài viết');
+            }
+            
         } catch (\Exception $e) {
             error_log("Error creating article: " . $e->getMessage());
-            
-            // Return to form with error message and old input
-            $this->view('articles/create', [
-                'title' => 'Tạo bài viết mới',
-                'error' => $e->getMessage(),
-                'csrf' => CSRF::token(),
-                'categories' => $this->categoryModel->all(),
-                'tags' => $this->tagModel->all(),
-                'oldInput' => $_POST
-            ]);
-            return;
+            Session::flash('error', $e->getMessage());
+            Session::flash('oldInput', $_POST);
+            header('Location: ' . BASE_URL . '/articles/create');
+            exit;
         }
     }
 
@@ -468,183 +491,6 @@ class ArticleController extends Controller
         }
     }
 
-    public function preview(int $id): void
-    {
-        if (!Auth::check()) {
-            header('Location: ' . BASE_URL . '/auth/login');
-            exit;
-        }
-
-        $article = $this->articleModel->findById($id);
-        if (!$article) {
-            http_response_code(404);
-            echo 'Không tìm thấy bài viết';
-            return;
-        }
-
-        if (!Auth::isAdmin() && Auth::user()['id'] !== $article['user_id']) {
-            http_response_code(403);
-            echo 'Bạn không có quyền xem bài viết này';
-            return;
-        }
-
-        $tags = $this->articleModel->getArticleTags($id);
-
-        $this->view('articles/preview', [
-            'title' => $article['title'] . ' (Preview)',
-            'article' => $article,
-            'tags' => $tags
-        ]);
-    }
-
-    public function drafts(): void
-    {
-        if (!Auth::check()) {
-            header('Location: ' . BASE_URL . '/auth/login');
-            exit;
-        }
-
-        $drafts = $this->articleModel->getUserDrafts(Auth::user()['id']);
-
-        $this->view('articles/drafts', [
-            'title' => 'Bản nháp của tôi',
-            'drafts' => $drafts
-        ]);
-    }
-
-    public function editDraft(int $id): void
-    {
-        if (!Auth::check()) {
-            header('Location: ' . BASE_URL . '/auth/login');
-            exit;
-        }
-
-        $draft = $this->articleModel->getDraft($id);
-        if (!$draft) {
-            http_response_code(404);
-            echo 'Không tìm thấy bản nháp';
-            return;
-        }
-
-        if (!Auth::isAdmin() && Auth::user()['id'] !== $draft['user_id']) {
-            http_response_code(403);
-            echo 'Bạn không có quyền sửa bản nháp này';
-            return;
-        }
-
-        $categories = $this->categoryModel->all();
-        $tags = $this->tagModel->all();
-
-        $this->view('articles/edit_draft', [
-            'title' => 'Chỉnh sửa bản nháp',
-            'draft' => $draft,
-            'categories' => $categories,
-            'tags' => $tags,
-            'csrf' => CSRF::token()
-        ]);
-    }
-
-    public function publish(int $id): void
-    {
-        if (!Auth::check()) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Unauthorized']);
-            return;
-        }
-
-        $article = $this->articleModel->findById($id);
-        if (!$article) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Article not found']);
-            return;
-        }
-
-        if (!Auth::isAdmin() && Auth::user()['id'] !== $article['user_id']) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Forbidden']);
-            return;
-        }
-
-        if ($this->articleModel->publish($id)) {
-            ActivityLogger::log('article_publish', $id);
-            header('Location: ' . BASE_URL . '/article/' . rawurlencode($article['slug']));
-        } else {
-            http_response_code(500);
-            echo json_encode(['error' => 'Failed to publish article']);
-        }
-    }
-
-
-    public function unpublish(int $id): void
-    {
-        if (!Auth::check()) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Unauthorized']);
-            return;
-        }
-
-        $article = $this->articleModel->findById($id);
-        if (!$article) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Article not found']);
-            return;
-        }
-
-        if (!Auth::isAdmin() && Auth::user()['id'] !== $article['user_id']) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Forbidden']);
-            return;
-        }
-
-        if ($this->articleModel->unpublish($id)) {
-            ActivityLogger::log('article_unpublish', $id);
-            header('Location: ' . BASE_URL . '/articles/drafts');
-        } else {
-            http_response_code(500);
-            echo json_encode(['error' => 'Failed to unpublish article']);
-        }
-    }
-
-    public function saveDraft(): void
-    {
-        if (!Auth::check()) {
-            header('Location: ' . BASE_URL . '/auth/login');
-            exit;
-        }
-
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo 'Invalid CSRF token';
-            return;
-        }
-
-        $title = trim($_POST['title'] ?? '');
-        $slug = trim($_POST['slug'] ?? '');
-        $content = trim($_POST['content'] ?? '');
-        
-        if ($title === '' || $slug === '') {
-            http_response_code(422);
-            echo 'Vui lòng điền tiêu đề và slug';
-            return;
-        }
-
-        $articleData = [
-            'title' => $title,
-            'slug' => $slug,
-            'content' => $content,
-            'user_id' => Auth::user()['id'],
-            'category_id' => (int)($_POST['category_id'] ?? 0) ?: null,
-            'tags' => $_POST['tags'] ?? [],
-            'status' => Article::STATUS_DRAFT
-        ];
-
-        $articleId = $this->articleModel->create($articleData);
-
-        ActivityLogger::log('article_draft_save', $articleId);
-        
-        header('Location: ' . BASE_URL . '/articles/drafts');
-        exit;
-    }
 
     private function buildPageUrl($page): string
     {

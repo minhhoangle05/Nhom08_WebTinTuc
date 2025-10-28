@@ -75,61 +75,84 @@ try {
             </div>
 
             <?php if (!empty($featured)): ?>
-                <?php foreach ($featured as $index => $article): ?>
-                    <article class="card article-card mb-4 border-0 shadow-sm slide-in-left" 
-                             style="--animation-delay: <?= $index * 0.1 ?>s;">
-                        <div class="row g-0">
-                            <?php if ($article['featured_image']): ?>
-                                <div class="col-md-4">
+                <div class="featured-articles-grid">
+                    <?php foreach ($featured as $index => $article): ?>
+                        <article class="featured-article-card slide-in-left" 
+                                 style="--animation-delay: <?= $index * 0.1 ?>s;">
+                            <!-- Article Image -->
+                            <div class="article-image-container">
+                                <?php if ($article['featured_image']): ?>
                                     <img src="<?= BASE_URL ?>/uploads/articles/<?= htmlspecialchars($article['featured_image']) ?>" 
-                                         class="img-fluid rounded-start h-100" 
-                                         style="object-fit: cover;"
+                                         class="article-image" 
                                          alt="<?= htmlspecialchars($article['title']) ?>">
-                                </div>
-                            <?php endif; ?>
-                            
-                            <div class="col-md-<?= $article['featured_image'] ? '8' : '12' ?>">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center mb-2 gap-2">
-                                        <span class="badge bg-primary"><?= htmlspecialchars($article['category_name'] ?? 'Chung') ?></span>
-                                        <span class="text-muted small">
-                                            <i class="bi bi-eye me-1"></i><?= number_format($article['views']) ?> lượt xem
-                                        </span>
-                                        <span class="text-muted small">
-                                            <i class="bi bi-chat-dots me-1"></i><?= number_format($article['comment_count']) ?> bình luận
-                                        </span>
+                                <?php else: ?>
+                                    <div class="article-image-placeholder">
+                                        <i class="bi bi-image"></i>
                                     </div>
-                                    
-                                    <h3 class="card-title h4">
-                                        <a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>" class="text-decoration-none stretched-link">
-                                            <?= htmlspecialchars($article['title']) ?>
-                                        </a>
-                                    </h3>
-                                    
-                                    <?php if ($article['summary']): ?>
-                                        <p class="card-text text-muted"><?= htmlspecialchars($article['summary']) ?></p>
-                                    <?php endif; ?>
-                                    
-                                    <div class="d-flex align-items-center mt-3">
-                                        <img src="<?= BASE_URL ?>/uploads/avatars/<?= $article['author_avatar'] ?? 'default.jpg' ?>" 
-                                             class="rounded-circle me-2" 
-                                             width="32" height="32" 
-                                             alt="<?= htmlspecialchars($article['author_name']) ?>">
-                                        <div class="small">
-                                            <div class="fw-bold"><?= htmlspecialchars($article['author_name']) ?></div>
-                                            <div class="text-muted">
-                                                <time datetime="<?= $article['created_at'] ?>" data-timestamp="<?= strtotime($article['created_at']) ?>">
-                                                    <?= date('d/m/Y H:i', strtotime($article['created_at'])) ?>
-                                                </time>
-                                                • <?= $article['reading_time'] ?? '5' ?> phút đọc
+                                <?php endif; ?>
+                                
+                                <!-- Category Badge -->
+                                <div class="category-badge">
+                                    <?= htmlspecialchars($article['category_name'] ?? 'Chung') ?>
+                                </div>
+                                
+                                <!-- Reading Time -->
+                                <div class="reading-time">
+                                    <i class="bi bi-clock"></i>
+                                    <?= $article['reading_time'] ?? '5' ?> phút
+                                </div>
+                            </div>
+                            
+                            <!-- Article Content -->
+                            <div class="article-content">
+                                <div class="article-meta">
+                                    <div class="author-info">
+                                        <div class="author-avatar">
+                                            <?= strtoupper(substr($article['author_name'], 0, 1)) ?>
+                                        </div>
+                                        <div class="author-details">
+                                            <div class="author-name"><?= htmlspecialchars($article['author_name']) ?></div>
+                                            <div class="publish-date">
+                                                <?= date('d/m/Y', strtotime($article['created_at'])) ?>
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    <div class="article-stats">
+                                        <span class="stat-item">
+                                            <i class="bi bi-eye"></i>
+                                            <?= number_format($article['views']) ?>
+                                        </span>
+                                        <span class="stat-item">
+                                            <i class="bi bi-chat-dots"></i>
+                                            <?= number_format($article['comment_count']) ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <h3 class="article-title">
+                                    <a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>">
+                                        <?= htmlspecialchars($article['title']) ?>
+                                    </a>
+                                </h3>
+                                
+                                <?php if ($article['summary']): ?>
+                                    <p class="article-summary">
+                                        <?= htmlspecialchars(substr($article['summary'], 0, 120)) ?>...
+                                    </p>
+                                <?php endif; ?>
+                                
+                                <div class="article-footer">
+                                    <a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>" 
+                                       class="read-more-btn">
+                                        Đọc tiếp
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
             <?php else: ?>
                 <div class="text-center py-5">
                     <div class="empty-state">
@@ -285,33 +308,226 @@ try {
     50% { transform: translateY(-20px) scale(1.05); }
 }
 
-.article-card {
-    transition: all 0.3s ease;
-    border: none !important;
+/* Featured Articles Grid */
+.featured-articles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.featured-article-card {
+    background: var(--bs-body-bg);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--bs-border-color);
+    position: relative;
+}
+
+.featured-article-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border-color: var(--bs-primary);
+}
+
+/* Article Image Container */
+.article-image-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.article-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.featured-article-card:hover .article-image {
+    transform: scale(1.1);
+}
+
+.article-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 3rem;
+    opacity: 0.7;
+}
+
+/* Category Badge */
+.category-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: var(--bs-primary);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Reading Time */
+.reading-time {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+/* Article Content */
+.article-content {
+    padding: 1.5rem;
+}
+
+.article-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.author-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.author-details {
+    flex: 1;
+}
+
+.author-name {
+    font-weight: 600;
+    color: var(--bs-body-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+}
+
+.publish-date {
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+}
+
+.article-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+}
+
+.stat-item i {
+    font-size: 0.7rem;
+}
+
+/* Article Title */
+.article-title {
+    margin-bottom: 0.75rem;
+}
+
+.article-title a {
+    color: var(--bs-body-color);
+    text-decoration: none;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.4;
+    transition: color 0.3s ease;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-.article-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+.article-title a:hover {
+    color: var(--bs-primary);
 }
 
-.article-card .card-title a {
-    color: var(--bs-body-color);
+/* Article Summary */
+.article-summary {
+    color: var(--bs-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Article Footer */
+.article-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.read-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bs-primary);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 25px;
     text-decoration: none;
-    transition: color 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.article-card .card-title a:hover {
-    color: var(--primary-color);
+.read-more-btn:hover {
+    background: var(--bs-primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
-.article-card img {
+.read-more-btn i {
+    font-size: 0.8rem;
     transition: transform 0.3s ease;
 }
 
-.article-card:hover img {
-    transform: scale(1.05);
+.read-more-btn:hover i {
+    transform: translateX(3px);
 }
 
 [data-bs-theme="dark"] .article-card {
@@ -358,24 +574,99 @@ try {
     }
 }
 
+/* Dark Mode Support */
+[data-bs-theme="dark"] .featured-article-card {
+    background: var(--bs-gray-800);
+    border-color: var(--bs-gray-700);
+}
+
+[data-bs-theme="dark"] .article-meta {
+    border-color: var(--bs-gray-700);
+}
+
+[data-bs-theme="dark"] .article-image-placeholder {
+    background: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%);
+}
+
+[data-bs-theme="dark"] .reading-time {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+}
+
 /* Responsive styles */
+@media (max-width: 1200px) {
+    .featured-articles-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+}
+
 @media (max-width: 768px) {
     .hero-section {
         border-radius: 0 0 1rem 1rem;
     }
     
-    .article-card .col-md-4 {
-        max-height: 200px;
-        overflow: hidden;
+    .featured-articles-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
-
-    .article-card .card-body {
-        padding: 1rem;
+    
+    .featured-article-card {
+        margin-bottom: 1rem;
     }
-
+    
+    .article-image-container {
+        height: 180px;
+    }
+    
+    .article-content {
+        padding: 1.25rem;
+    }
+    
+    .article-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .article-stats {
+        align-self: flex-end;
+    }
+    
+    .article-title a {
+        font-size: 1.1rem;
+    }
+    
     .hero-section .btn-lg {
         padding: 0.5rem 1rem;
         font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .featured-articles-grid {
+        gap: 1rem;
+    }
+    
+    .article-image-container {
+        height: 160px;
+    }
+    
+    .article-content {
+        padding: 1rem;
+    }
+    
+    .article-title a {
+        font-size: 1rem;
+    }
+    
+    .article-summary {
+        font-size: 0.85rem;
+    }
+    
+    .read-more-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
     }
 }
 

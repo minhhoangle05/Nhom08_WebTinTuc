@@ -121,5 +121,5 @@
         </div>
     </div>
 
-    <?php require BASE_PATH . '/app/views/layouts/footer.php'; ?>
+	
 

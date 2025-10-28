@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Simple Article Creation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-md-8">
+                <h1>Test Simple Article Creation</h1>
+                
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle me-2"></i>Hướng dẫn:</h5>
+                    <ol>
+                        <li>Chạy script SQL: <code>mysql -u root -p article_portal < scripts/simplify_articles.sql</code></li>
+                        <li>Đăng nhập vào hệ thống</li>
+                        <li>Truy cập <a href="/articles/create" target="_blank">/articles/create</a> để tạo bài viết</li>
+                    </ol>
+                </div>
+
+                <h3>Form Test Đơn Giản</h3>
+                <form method="post" action="<?= BASE_URL ?>/articles">
+                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tiêu đề</label>
+                        <input type="text" name="title" class="form-control" value="Bài viết test đơn giản" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Slug</label>
+                        <input type="text" name="slug" class="form-control" value="bai-viet-test-don-gian" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tóm tắt</label>
+                        <textarea name="summary" class="form-control" rows="2">Đây là bài viết test để kiểm tra chức năng đăng bài đơn giản.</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nội dung</label>
+                        <textarea name="content" class="form-control" rows="5" required>Đây là nội dung của bài viết test. Chức năng đăng bài đã được đơn giản hóa để dễ sử dụng hơn.
+
+Không còn các tính năng phức tạp như draft, publish, unpublish. Chỉ cần điền thông tin và nhấn "Tạo bài viết" là xong.</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Chuyên mục</label>
+                        <select name="category_id" class="form-select">
+                            <option value="">-- Chọn chuyên mục --</option>
+                            <option value="1">Công nghệ</option>
+                            <option value="2">Kinh doanh</option>
+                            <option value="3">Lối sống</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tags</label>
+                        <select name="tags[]" class="form-select" multiple>
+                            <option value="1">AI</option>
+                            <option value="2">Công nghệ</option>
+                            <option value="3">Startup</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i> Tạo bài viết
+                    </button>
+                </form>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Trạng thái Database</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Scripts đã tạo:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-1"></i> simplify_articles.sql</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i> create_simple.php</li>
+                        </ul>
+                        
+                        <h6>Code đã sửa:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-1"></i> ArticleController.php</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i> Article.php</li>
+                        </ul>
+                        
+                        <h6>Các tính năng đã loại bỏ:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-x-circle text-danger me-1"></i> Draft system</li>
+                            <li><i class="bi bi-x-circle text-danger me-1"></i> Publish/Unpublish</li>
+                            <li><i class="bi bi-x-circle text-danger me-1"></i> Status field</li>
+                            <li><i class="bi bi-x-circle text-danger me-1"></i> Meta fields</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Cấu trúc Database mới</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Bảng articles:</h6>
+                        <ul class="list-unstyled small">
+                            <li>✓ id</li>
+                            <li>✓ title</li>
+                            <li>✓ slug</li>
+                            <li>✓ content</li>
+                            <li>✓ summary</li>
+                            <li>✓ featured_image</li>
+                            <li>✓ user_id</li>
+                            <li>✓ category_id</li>
+                            <li>✓ views</li>
+                            <li>✓ created_at</li>
+                            <li>✓ updated_at</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

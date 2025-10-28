@@ -173,6 +173,8 @@ body.d-flex .footer {
     left: 1rem;
     color: var(--bs-secondary);
     z-index: 3;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .auth-input-action {
@@ -199,14 +201,26 @@ body.d-flex .footer {
 }
 
 .auth-input-group .form-control {
-    height: 3.2rem;
-    padding-left: 3rem;
+    height: 3.25rem; /* uniform height */
+    padding-left: 3.5rem; /* extra space so placeholder/text don't touch icon */
+    padding-right: 1rem;
+    padding-top: .8rem;  /* balanced vertical padding */
+    padding-bottom: .8rem;
     border-radius: 0.75rem;
     font-size: 1rem;
     border: 1px solid var(--bs-border-color);
     background-color: var(--bs-body-bg);
     transition: all 0.2s ease;
 }
+
+/* When the input has a trailing action button (eye icon), reserve extra space */
+.auth-input-group.has-action .form-control {
+    padding-right: 3.25rem; /* leave room for eye icon */
+}
+
+/* Enlarge leading/trailing icons and keep them centered */
+.auth-input-icon i { font-size: 1.25rem; line-height: 1; display: inline-block; }
+.auth-input-action i { font-size: 1.25rem; }
 
 .auth-input-group .form-control:focus {
     border-color: var(--bs-primary);

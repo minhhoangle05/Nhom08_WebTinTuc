@@ -86,6 +86,6 @@
         <?php endif; ?>
 </article>
 
-<?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
+
 
 
