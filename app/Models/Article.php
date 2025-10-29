@@ -7,13 +7,85 @@ use PDO;
 
 class Article extends Model
 {
-    const STATUS_DRAFT = 'draft';
-    const STATUS_PUBLISHED = 'published';
-    const STATUS_PRIVATE = 'private';
 
     /**
      * Build the base SQL query with all necessary joins
      */
+    /**
+     * Create a new article with full validation and error handling
+     */
+    public function create(array $data): int
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Validate slug uniqueness
+            if ($this->slugExists($data['slug'])) {
+                throw new \Exception('Slug đã tồn tại, vui lòng chọn slug khác');
+            }
+
+            // 1. Insert article
+            $stmt = $this->db->prepare('
+                INSERT INTO articles (
+                    title, 
+                    slug, 
+                    content,
+                    summary,
+                    user_id, 
+                    category_id,
+                    featured_image,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    :title,
+                    :slug,
+                    :content,
+                    :summary,
+                    :user_id,
+                    :category_id,
+                    :featured_image,
+                    NOW(),
+                    NOW()
+                )
+            ');
+
+            $stmt->execute([
+                ':title' => $data['title'],
+                ':slug' => $data['slug'],
+                ':content' => $data['content'],
+                ':summary' => $data['summary'] ?? null,
+                ':user_id' => $data['user_id'],
+                ':category_id' => $data['category_id'],
+                ':featured_image' => $data['featured_image'] ?? null
+            ]);
+
+            $articleId = (int)$this->db->lastInsertId();
+
+            // 2. Handle tags if provided
+            if (!empty($data['tags'])) {
+                $tagStmt = $this->db->prepare('
+                    INSERT INTO article_tags (article_id, tag_id) 
+                    VALUES (:article_id, :tag_id)
+                ');
+
+                foreach ($data['tags'] as $tagId) {
+                    $tagStmt->execute([
+                        ':article_id' => $articleId,
+                        ':tag_id' => $tagId
+                    ]);
+                }
+            }
+
+            $this->db->commit();
+            return $articleId;
+
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            error_log("Database error in Article::create: " . $e->getMessage());
+            throw new \Exception('Không thể tạo bài viết. Vui lòng thử lại sau.');
+        }
+    }
+
     protected function buildBaseQuery(): string
     {
         return 'SELECT a.*, 
@@ -41,42 +113,25 @@ class Article extends Model
         if (!empty($params['category_id'])) {
             $where[] = 'a.category_id = ?';
             $values[] = $params['category_id'];
-        }
-
-        if (!empty($params['category'])) {
-            $where[] = 'c.name = ?';
-            $values[] = $params['category'];
-        }
-
-        if (!empty($params['category_slug'])) {
-            $where[] = 'c.slug = ?';
-            $values[] = $params['category_slug'];
+            error_log("Adding category_id condition: " . $params['category_id']);
         }
 
         if (!empty($params['tag'])) {
             $where[] = 't.name = ?';
             $values[] = $params['tag'];
+            error_log("Adding tag condition: " . $params['tag']);
         }
 
         if (!empty($params['q'])) {
-            $where[] = '(a.title LIKE ? OR a.content LIKE ?)';
+            $where[] = '(a.title LIKE ? OR a.content LIKE ? OR a.summary LIKE ?)';
             $searchTerm = '%' . $params['q'] . '%';
             $values[] = $searchTerm;
             $values[] = $searchTerm;
+            $values[] = $searchTerm;
+            error_log("Adding search term condition: " . $params['q']);
         }
 
-        if (isset($params['status'])) {
-            if ($params['status'] === 'all') {
-                // No status filter
-            } else {
-                $where[] = 'a.status = ?';
-                $values[] = $params['status'];
-            }
-        } else if (!isset($params['include_drafts'])) {
-            // Default: only show published articles for public views
-            $where[] = 'a.status = ?';
-            $values[] = self::STATUS_PUBLISHED;
-        }
+        // Không cần filter status nữa vì tất cả bài viết đều là published
 
         if (!empty($params['user_id'])) {
             $where[] = 'a.user_id = ?';
@@ -101,6 +156,8 @@ class Article extends Model
      */
     public function search(array $params = [], int $limit = 10, int $offset = 0): array
     {
+        error_log("Starting article search with params: " . print_r($params, true));
+        
         $conditions = $this->buildSearchConditions($params);
         $where = $conditions['where'];
         $values = $conditions['values'];
@@ -109,6 +166,7 @@ class Article extends Model
 
         if (!empty($where)) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
+            error_log("Search WHERE clause: " . implode(' AND ', $where));
         }
 
         $sql .= ' GROUP BY a.id';
@@ -164,11 +222,11 @@ class Article extends Model
     }
 
     /**
-     * Get all published articles with pagination
+     * Get all articles with pagination
      */
     public function all(int $limit = 10, int $offset = 0): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, $offset);
+        return $this->search([], $limit, $offset);
     }
 
     /**
@@ -185,8 +243,7 @@ class Article extends Model
     public function findByCategory(int $categoryId, int $limit = 10, int $offset = 0): array
     {
         return $this->search([
-            'category_id' => $categoryId,
-            'status' => self::STATUS_PUBLISHED
+            'category_id' => $categoryId
         ], $limit, $offset);
     }
 
@@ -196,8 +253,7 @@ class Article extends Model
     public function findByCategorySlug(string $categorySlug, int $limit = 10, int $offset = 0): array
     {
         return $this->search([
-            'category_slug' => $categorySlug,
-            'status' => self::STATUS_PUBLISHED
+            'category_slug' => $categorySlug
         ], $limit, $offset);
     }
 
@@ -242,66 +298,21 @@ class Article extends Model
         return $article ?: null;
     }
 
-    /**
-     * Get user's draft articles
-     */
-    public function getUserDrafts(int $userId, int $limit = 50, int $offset = 0): array
-    {
-        return $this->search([
-            'user_id' => $userId,
-            'status' => self::STATUS_DRAFT,
-            'include_drafts' => true
-        ], $limit, $offset);
-    }
+
+    
 
     /**
-     * Get a draft by ID
-     */
-    public function getDraft(int $id): ?array
-    {
-        return $this->findById($id);
-    }
-
-    /**
-     * Publish an article
-     */
-    public function publish(int $id): bool
-    {
-        $stmt = $this->db->prepare('UPDATE articles SET status = ?, updated_at = NOW() WHERE id = ?');
-        return $stmt->execute([self::STATUS_PUBLISHED, $id]);
-    }
-
-    /**
-     * Unpublish an article (set to draft)
-     */
-    public function unpublish(int $id): bool
-    {
-        $stmt = $this->db->prepare('UPDATE articles SET status = ?, updated_at = NOW() WHERE id = ?');
-        return $stmt->execute([self::STATUS_DRAFT, $id]);
-    }
-
-    /**
-     * Save article as draft
-     */
-    public function saveDraft(int $id): bool
-    {
-        $stmt = $this->db->prepare('UPDATE articles SET status = ?, updated_at = NOW() WHERE id = ?');
-        return $stmt->execute([self::STATUS_DRAFT, $id]);
-    }
-
-    /**
-     * Get featured articles (most viewed published articles)
+     * Get featured articles (most viewed articles)
      */
     public function featuredToday(int $limit = 6): array
     {
         $sql = $this->buildBaseQuery();
-        $sql .= ' WHERE a.status = ?
-                  GROUP BY a.id
+        $sql .= ' GROUP BY a.id
                   ORDER BY a.views DESC, a.created_at DESC
                   LIMIT ?';
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([self::STATUS_PUBLISHED, $limit]);
+        $stmt->execute([$limit]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -310,61 +321,84 @@ class Article extends Model
      */
     public function popular(int $limit = 5): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, 0);
+        return $this->search([], $limit, 0);
     }
 
     /**
-     * Get latest published articles
+     * Get latest articles
      */
     public function latest(int $limit = 10): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, 0);
+        return $this->search([], $limit, 0);
     }
 
     /**
-     * Get recent articles by user (including drafts)
+     * Find related articles based on category and tags
+     */
+    public function findRelated(int $articleId, ?int $categoryId, int $limit = 4): array
+    {
+        try {
+            // Bắt đầu với truy vấn cơ bản
+            $sql = $this->buildBaseQuery();
+            $params = [$articleId];
+            
+            if ($categoryId) {
+                // Ưu tiên bài viết cùng danh mục
+                $sql .= ' WHERE a.id != ? AND (
+                    a.category_id = ? OR 
+                    EXISTS (
+                        SELECT 1 FROM article_tags at1 
+                        JOIN article_tags at2 ON at1.tag_id = at2.tag_id 
+                        WHERE at1.article_id = a.id AND at2.article_id = ?
+                    )
+                )';
+                $params[] = $categoryId;
+                $params[] = $articleId;
+            } else {
+                // Nếu không có danh mục, chỉ dựa vào tags
+                $sql .= ' WHERE a.id != ? AND EXISTS (
+                    SELECT 1 FROM article_tags at1 
+                    JOIN article_tags at2 ON at1.tag_id = at2.tag_id 
+                    WHERE at1.article_id = a.id AND at2.article_id = ?
+                )';
+                $params[] = $articleId;
+            }
+
+            $sql .= ' GROUP BY a.id ORDER BY 
+                     CASE WHEN a.category_id = ? THEN 1 ELSE 2 END,
+                     a.views DESC, 
+                     a.created_at DESC 
+                     LIMIT ?';
+            
+            $params[] = $categoryId ?? 0;
+            $params[] = $limit;
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (\PDOException $e) {
+            error_log("Error finding related articles: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get recent articles by user
      */
     public function getByUser(int $userId, int $limit = 10, int $offset = 0): array
     {
         return $this->search([
-            'user_id' => $userId,
-            'status' => 'all'
+            'user_id' => $userId
         ], $limit, $offset);
     }
 
     /**
-     * Get recent published articles
+     * Get recent articles
      */
     public function recent(int $limit = 10): array
     {
-        return $this->search(['status' => self::STATUS_PUBLISHED], $limit, 0);
-    }
-
-    /**
-     * Create a new article
-     */
-    public function create(array $data): int
-    {
-        $stmt = $this->db->prepare('INSERT INTO articles (
-            title, slug, content, user_id, category_id, status
-        ) VALUES (?, ?, ?, ?, ?, ?)');
-
-        $stmt->execute([
-            $data['title'],
-            $data['slug'],
-            $data['content'],
-            $data['user_id'],
-            $data['category_id'] ?? null,
-            $data['status'] ?? self::STATUS_DRAFT
-        ]);
-
-        $articleId = (int)$this->db->lastInsertId();
-
-        if (!empty($data['tags'])) {
-            $this->saveTags($articleId, $data['tags']);
-        }
-
-        return $articleId;
+        return $this->search([], $limit, 0);
     }
 
     /**

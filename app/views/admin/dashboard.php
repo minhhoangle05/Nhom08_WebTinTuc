@@ -6,7 +6,7 @@
     <div class="card text-bg-primary h-100">
       <div class="card-body">
         <h5 class="card-title">Bài viết</h5>
-        <div class="display-6"><?= number_format($stats['articles']) ?></div>
+        <div class="display-6"><?= number_format((float)($stats['articles'] ?? 0)) ?></div>
       </div>
     </div>
   </div>
@@ -14,7 +14,7 @@
     <div class="card text-bg-success h-100">
       <div class="card-body">
         <h5 class="card-title">Người dùng</h5>
-        <div class="display-6"><?= number_format($stats['users']) ?></div>
+        <div class="display-6"><?= number_format((float)($stats['users'] ?? 0)) ?></div>
       </div>
     </div>
   </div>
@@ -22,7 +22,7 @@
     <div class="card text-bg-warning h-100">
       <div class="card-body">
         <h5 class="card-title">Bình luận</h5>
-        <div class="display-6"><?= number_format($stats['comments']) ?></div>
+        <div class="display-6"><?= number_format((float)($stats['comments'] ?? 0)) ?></div>
       </div>
     </div>
   </div>
@@ -30,7 +30,7 @@
     <div class="card text-bg-info h-100">
       <div class="card-body">
         <h5 class="card-title">Lượt xem</h5>
-        <div class="display-6"><?= number_format($stats['total_views']) ?></div>
+        <div class="display-6"><?= number_format((float)($stats['total_views'] ?? 0)) ?></div>
       </div>
     </div>
   </div>
@@ -63,7 +63,7 @@
                 <td><?= htmlspecialchars($article['author_name']) ?></td>
                 <td><?= htmlspecialchars($article['category_name'] ?? 'Chưa phân loại') ?></td>
                 <td><?= date('d/m/Y H:i', strtotime($article['created_at'])) ?></td>
-                <td><?= number_format($article['views']) ?></td>
+                <td><?= number_format((float)($article['views'] ?? 0)) ?></td>
               </tr>
               <?php endforeach; ?>
             </tbody>
@@ -98,7 +98,7 @@
                 <td><?= htmlspecialchars($user['name']) ?></td>
                 <td><?= htmlspecialchars($user['email']) ?></td>
                 <td><span class="badge <?= $user['role_id'] === 1 ? 'bg-danger' : 'bg-primary' ?>"><?= htmlspecialchars($user['role_name']) ?></span></td>
-                <td><?= number_format($user['article_count']) ?></td>
+                <td><?= number_format((float)($user['article_count'] ?? 0)) ?></td>
                 <td><?= date('d/m/Y H:i', strtotime($user['created_at'])) ?></td>
               </tr>
               <?php endforeach; ?>
@@ -130,9 +130,9 @@
               <?php foreach ($categoryStats as $cat): ?>
               <tr>
                 <td><?= htmlspecialchars($cat['name']) ?></td>
-                <td><?= number_format($cat['article_count']) ?></td>
-                <td><?= number_format($cat['total_views']) ?></td>
-                <td><?= $cat['article_count'] > 0 ? number_format($cat['total_views'] / $cat['article_count'], 1) : 0 ?></td>
+                <td><?= number_format((float)($cat['article_count'] ?? 0)) ?></td>
+                <td><?= number_format((float)($cat['total_views'] ?? 0)) ?></td>
+                <td><?php $ac = (int)($cat['article_count'] ?? 0); $tv = (float)($cat['total_views'] ?? 0); echo $ac > 0 ? number_format($tv / $ac, 1) : 0; ?></td>
               </tr>
               <?php endforeach; ?>
             </tbody>
@@ -165,7 +165,7 @@
                 <td><a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>"><?= htmlspecialchars($article['title']) ?></a></td>
                 <td><?= htmlspecialchars($article['author_name']) ?></td>
                 <td><?= htmlspecialchars($article['category_name'] ?? 'Chưa phân loại') ?></td>
-                <td><?= number_format($article['views']) ?></td>
+                <td><?= number_format((float)($article['views'] ?? 0)) ?></td>
               </tr>
               <?php endforeach; ?>
             </tbody>
@@ -205,9 +205,9 @@ setTimeout(function() {
               <?php foreach ($viewStats as $stat): ?>
               <tr>
                 <td><?= date('d/m/Y', strtotime($stat['date'])) ?></td>
-                <td><?= number_format($stat['view_count']) ?></td>
-                <td><?= number_format($stat['unique_users']) ?></td>
-                <td><?= number_format($stat['unique_ips']) ?></td>
+                <td><?= number_format((float)($stat['view_count'] ?? 0)) ?></td>
+                <td><?= number_format((float)($stat['unique_users'] ?? 0)) ?></td>
+                <td><?= number_format((float)($stat['unique_ips'] ?? 0)) ?></td>
               </tr>
               <?php endforeach; ?>
             </tbody>

@@ -9,14 +9,15 @@ if (!isset($content)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= isset($title) ? htmlspecialchars($title) : 'ArticleHub - Your Source for Quality Content' ?></title>
-    <meta name="description" content="Discover amazing articles on technology, lifestyle, business and more. Join our community of writers and readers.">
-    <meta name="keywords" content="articles, blog, technology, lifestyle, business, writing">
+    <title><?= isset($title) ? htmlspecialchars($title) : 'ArticleHub - Nguồn tin tức chất lượng của bạn' ?></title>
+    <meta name="description" content="Khám phá những bài viết tuyệt vời về công nghệ, lối sống, kinh doanh và nhiều hơn nữa. Tham gia cộng đồng người viết và độc giả của chúng tôi.">
+    <meta name="keywords" content="bài viết, blog, công nghệ, lối sống, kinh doanh, viết lách">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/css/auth.css">
     
     <!-- JavaScript Libraries -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -24,7 +25,7 @@ if (!isset($content)) {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
   <div class="container">
     <a class="navbar-brand fw-bold" href="<?= BASE_URL ?>/">ArticleHub</a>
@@ -74,7 +75,7 @@ if (!isset($content)) {
               <i class="bi bi-person-circle me-1"></i><?= htmlspecialchars(\App\Core\Auth::user()['name']) ?>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="<?= BASE_URL ?>/profile"><i class="bi bi-person me-2"></i>Thông tin cá nhân</a></li>
+              <li><a class="dropdown-item" href="<?= BASE_URL ?>/account/profile"><i class="bi bi-person me-2"></i>Thông tin cá nhân</a></li>
               <li><a class="dropdown-item" href="<?= BASE_URL ?>/articles/mine"><i class="bi bi-journals me-2"></i>Bài viết của tôi</a></li>
               <?php if (\App\Core\Auth::user()['role_id'] === 3): ?>
                 <li><a class="dropdown-item" href="<?= BASE_URL ?>/admin/dashboard"><i class="bi bi-speedometer me-2"></i>Quản trị</a></li>
@@ -93,55 +94,53 @@ if (!isset($content)) {
   </div>
 </nav>
 
-<main class="container my-4">
+<main class="flex-grow-1 site-main">
   <?= $content ?>
 </main>
 
-<footer class="footer mt-auto py-3 bg-dark text-light">
-  <div class="container">
-    <div class="row py-4">
-      <div class="col-lg-4 mb-4 mb-lg-0">
-        <h5 class="fw-bold mb-3">ArticleHub</h5>
-        <p class="text-muted mb-3">Nơi chia sẻ kiến thức và cảm hứng mỗi ngày.</p>
-        <div class="social-links mb-3">
-          <a href="#" class="text-light me-3" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-          <a href="#" class="text-light me-3" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
-          <a href="#" class="text-light me-3" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-          <a href="#" class="text-light" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-        </div>
-      </div>
-      <div class="col-sm-6 col-lg-4 mb-4 mb-lg-0">
-        <h6 class="text-uppercase fw-bold mb-3">Liên kết</h6>
-        <ul class="list-unstyled">
-          <li class="mb-2"><a href="<?= BASE_URL ?>/" class="text-muted text-decoration-none">Trang chủ</a></li>
-          <li class="mb-2"><a href="<?= BASE_URL ?>/articles" class="text-muted text-decoration-none">Bài viết</a></li>
-          <li class="mb-2"><a href="<?= BASE_URL ?>/about" class="text-muted text-decoration-none">Giới thiệu</a></li>
-          <li><a href="<?= BASE_URL ?>/contact" class="text-muted text-decoration-none">Liên hệ</a></li>
-        </ul>
-      </div>
-      <div class="col-sm-6 col-lg-4">
-        <h6 class="text-uppercase fw-bold mb-3">Liên hệ</h6>
-        <ul class="list-unstyled text-muted">
-          <li class="mb-2"><i class="bi bi-geo-alt me-2"></i>123 Street, City, Country</li>
-          <li class="mb-2"><i class="bi bi-envelope me-2"></i>contact@articlehub.com</li>
-          <li><i class="bi bi-telephone me-2"></i>(123) 456-7890</li>
-        </ul>
-      </div>
-    </div>
-    <hr class="border-secondary my-0">
-    <div class="row py-3">
-      <div class="col-md-6 text-center text-md-start text-muted">
-        <small>&copy; <?= date('Y') ?> ArticleHub. All rights reserved.</small>
-      </div>
-      <div class="col-md-6 text-center text-md-end text-muted">
-        <small><a href="<?= BASE_URL ?>/privacy" class="text-muted text-decoration-none">Privacy Policy</a> · <a href="<?= BASE_URL ?>/terms" class="text-muted text-decoration-none">Terms of Service</a></small>
-      </div>
-    </div>
-  </div>
-</footer>
+<?php include BASE_PATH . '/app/views/layouts/footer.php'; ?>
 
+<!-- Bootstrap and other core JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= BASE_URL ?>/js/app.js"></script>
+
+<!-- Auth form specific JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const password = document.getElementById('password');
+    if (togglePassword && password) {
+        togglePassword.addEventListener('click', function() {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
+        });
+    }
+
+    // Password match validation for registration
+    const password2 = document.getElementById('password2');
+    const passwordMatchMsg = document.querySelector('.password-match-msg');
+    if (password2 && passwordMatchMsg) {
+        const validatePassword = function() {
+            if (password.value !== password2.value) {
+                passwordMatchMsg.textContent = 'Mật khẩu không khớp';
+                passwordMatchMsg.classList.add('text-danger');
+                password2.setCustomValidity('Mật khẩu không khớp');
+            } else {
+                passwordMatchMsg.textContent = 'Mật khẩu khớp';
+                passwordMatchMsg.classList.remove('text-danger');
+                passwordMatchMsg.classList.add('text-success');
+                password2.setCustomValidity('');
+            }
+        };
+        password.addEventListener('change', validatePassword);
+        password2.addEventListener('keyup', validatePassword);
+    }
+});
+</script>
 </body>
 </html>
 

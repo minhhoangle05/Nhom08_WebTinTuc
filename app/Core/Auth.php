@@ -98,6 +98,132 @@ class Auth
             Session::set('last_activity', time());
         }
     }
+
+    public static function createPasswordResetToken(string $email): ?string
+    {
+        // Kiểm tra email tồn tại
+        $db = Database::getConnection();
+        $stmt = $db->prepare('SELECT id FROM users WHERE email = ?');
+        $stmt->execute([$email]);
+        if (!$stmt->fetch()) {
+            return null;
+        }
+
+        // Tạo token ngẫu nhiên
+        $token = bin2hex(random_bytes(32));
+
+        // Xóa token cũ nếu có
+        $stmt = $db->prepare('DELETE FROM password_resets WHERE email = ? AND used = 0');
+        $stmt->execute([$email]);
+
+        // Thêm token mới với thời hạn 24 giờ
+        $stmt = $db->prepare('
+            INSERT INTO password_resets (
+                email, 
+                token, 
+                created_at, 
+                expires_at, 
+                used
+            ) VALUES (
+                ?, 
+                ?, 
+                NOW(), 
+                DATE_ADD(NOW(), INTERVAL 24 HOUR),
+                0
+            )
+        ');
+        $stmt->execute([$email, $token]);
+
+        return $token;
+    }
+
+    public static function verifyPasswordResetToken(string $token): ?string
+    {
+        try {
+            $db = Database::getConnection();
+            
+            // Thêm log để debug
+            error_log("Verifying password reset token: " . $token);
+            
+            // Kiểm tra token trong database
+            $stmt = $db->prepare('SELECT * FROM password_resets WHERE token = ?');
+            $stmt->execute([$token]);
+            $result = $stmt->fetch();
+            
+            if (!$result) {
+                error_log("Token not found in database");
+                return null;
+            }
+            
+            error_log("Found token record: " . print_r($result, true));
+            
+            // Kiểm tra token đã sử dụng chưa
+            if ($result['used']) {
+                error_log("Token has already been used");
+                return null;
+            }
+            
+            // Kiểm tra thời hạn
+            $now = new \DateTime();
+            $expiresAt = new \DateTime($result['expires_at']);
+            
+            error_log("Current time: " . $now->format('Y-m-d H:i:s'));
+            error_log("Token expires at: " . $expiresAt->format('Y-m-d H:i:s'));
+            
+            if ($now > $expiresAt) {
+                error_log("Token has expired");
+                return null;
+            }
+
+            error_log("Token is valid and not expired");
+            return $result['email'];        } catch (\Exception $e) {
+            error_log("Error verifying password reset token: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public static function resetPassword(string $token, string $newPassword): bool
+    {
+        error_log("Attempting to reset password with token: " . $token);
+        
+        $email = self::verifyPasswordResetToken($token);
+        if (!$email) {
+            error_log("Token verification failed during password reset");
+            return false;
+        }
+
+        try {
+            $db = Database::getConnection();
+            $db->beginTransaction();
+
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            // Cập nhật mật khẩu mới
+            $stmt = $db->prepare('UPDATE users SET password_hash = ? WHERE email = ?');
+            $updated = $stmt->execute([$hashedPassword, $email]);
+
+            if ($updated) {
+                // Đánh dấu token đã sử dụng
+                $stmt = $db->prepare('UPDATE password_resets SET used = 1 WHERE token = ?');
+                $stmt->execute([$token]);
+                
+                $db->commit();
+                error_log("Password reset successful for email: " . $email);
+                return true;
+            }
+
+            $db->rollBack();
+            error_log("Failed to update password for email: " . $email);
+            return false;
+            
+        } catch (\Exception $e) {
+            error_log("Error during password reset: " . $e->getMessage());
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            return false;
+        }
+    }
 }
 
 

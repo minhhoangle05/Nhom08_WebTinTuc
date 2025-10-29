@@ -1,17 +1,118 @@
-:root {
-    --primary-color: #2563eb;
-    --accent-color: #f59e0b;
-	--secondary-color: #64748b;
-	--success-color: #10b981;
-	--danger-color: #ef4444;
+/* ========================================
+   STICKY FOOTER FIX - MUST BE AT TOP
+   ======================================== */
+
+* {
+    box-sizing: border-box;
 }
 
-html { scroll-behavior: smooth; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; }
+html {
+    height: 100%;
+}
 
+body {
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar không grow */
+body > .navbar,
+body > nav {
+    flex: 0 0 auto !important;
+}
+
+/* Main PHẢI grow để đẩy footer xuống */
+body > main,
+body > .site-main,
+main.site-main,
+main.flex-grow-1 {
+    flex: 1 0 auto !important;
+    width: 100%;
+    position: relative !important; /* KHÔNG được absolute */
+}
+
+/* Footer KHÔNG được grow */
+body > footer,
+body > .footer,
+footer.footer {
+    flex: 0 0 auto !important;
+    width: 100%;
+    margin-top: 0 !important; /* Xóa mt-auto của Bootstrap */
+}
+
+/* Kill bất kỳ absolute positioning nào trong main */
+main * {
+    position: relative !important;
+}
+
+main .hero-section,
+main .container,
+main .container-fluid,
+main section {
+    position: relative !important;
+}
+
+/* Chỉ cho phép sticky cho sidebar */
+.sticky-sidebar {
+    position: sticky !important;
+}
+
+/* ======================================== */
+:root {
+    /* Color system */
+    --primary-color: #2563eb;
+    --accent-color: #f59e0b;
+    --secondary-color: #64748b;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    
+    /* Typography */
+    --font-size-base: 16px;
+    --line-height-base: 1.6;
+    
+    /* Spacing */
+    --spacing-unit: 8px;
+    --container-padding: 20px;
+    
+    /* Transitions */
+    --transition-fast: 0.2s;
+    --transition-base: 0.4s;
+    --transition-slow: 0.6s;
+    --ease-base: cubic-bezier(.4,0,.2,1);
+}
+
+html { scroll-behavior: smooth; height:100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; height:100%; }
+body.d-flex {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh;
+}
+
+body.d-flex .site-main {
+    flex: 1 0 auto; /* Cho phép main tự động co giãn */
+}
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+body.d-flex .footer {
+    flex-shrink: 0; /* Footer không bị co lại */
+    margin-top: auto; /* Luôn dính dưới cùng */
+}
 /* Smooth theme transitions */
-*, *::before, *::after { transition: background-color .4s cubic-bezier(.4,0,.2,1), color .4s cubic-bezier(.4,0,.2,1), border-color .4s cubic-bezier(.4,0,.2,1), box-shadow .4s cubic-bezier(.4,0,.2,1); }
-
+/* Không apply transition cho layout properties */
+*, *::before, *::after { 
+    transition: background-color .4s cubic-bezier(.4,0,.2,1), 
+                color .4s cubic-bezier(.4,0,.2,1), 
+                border-color .4s cubic-bezier(.4,0,.2,1), 
+                box-shadow .4s cubic-bezier(.4,0,.2,1); 
+    /* KHÔNG transition cho position, display, flex */
+}
 /* Animations */
 .fade-in { opacity:0; transform: translateY(30px); transition: all .6s ease; }
 .fade-in.visible { opacity:1; transform:none; }
@@ -25,9 +126,250 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line
 .hero-section { background: linear-gradient(135deg, var(--primary-color), #1e40af); color: #fff; padding:100px 0; margin-bottom:50px; }
 [data-bs-theme="dark"] .hero-section { background: linear-gradient(135deg, #1e293b, #0f172a); }
 
-.navbar { transition: background-color .5s cubic-bezier(.4,0,.2,1), border-color .5s cubic-bezier(.4,0,.2,1) !important; }
+.navbar { transition: background-color .5s cubic-bezier(.4,0,.2,1), border-color .5s cubic-bezier(.4,0,.2,1) !important; flex-shrink: 0;}
 .navbar-brand { color: var(--primary-color) !important; font-weight:700; }
 [data-bs-theme="dark"] .navbar { background-color: var(--bs-gray-900) !important; border-bottom:1px solid var(--bs-gray-700); }
+
+/* Auth Pages Styles */
+.auth-wrapper {
+    min-height: calc(100vh - 150px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.1), rgba(var(--bs-primary-rgb), 0.05));
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 480px;
+}
+
+.auth-card {
+    border-radius: 1rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+    background: var(--bs-body-bg);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.12);
+}
+
+.auth-title {
+    color: var(--bs-heading-color);
+    margin-bottom: 0.5rem;
+}
+
+.auth-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.auth-input-icon {
+    position: absolute;
+    left: 1rem;
+    color: var(--bs-secondary);
+    z-index: 3;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.auth-input-action {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--bs-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.2s ease;
+    z-index: 10;
+}
+
+.auth-input-action:hover {
+    color: var(--bs-primary);
+}
+
+.auth-input-action i {
+    font-size: 1.2rem;
+    display: block;
+}
+
+.auth-input-group .form-control {
+    height: 3.25rem; /* uniform height */
+    padding-left: 3.5rem; /* extra space so placeholder/text don't touch icon */
+    padding-right: 1rem;
+    padding-top: .8rem;  /* balanced vertical padding */
+    padding-bottom: .8rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-body-bg);
+    transition: all 0.2s ease;
+}
+
+/* When the input has a trailing action button (eye icon), reserve extra space */
+.auth-input-group.has-action .form-control {
+    padding-right: 3.25rem; /* leave room for eye icon */
+}
+
+/* Enlarge leading/trailing icons and keep them centered */
+.auth-input-icon i { font-size: 1.25rem; line-height: 1; display: inline-block; }
+.auth-input-action i { font-size: 1.25rem; }
+
+.auth-input-group .form-control:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.auth-form .btn {
+    padding: 0.8rem 2rem;
+    font-weight: 500;
+    border-radius: 0.75rem;
+}
+
+.auth-form .btn-primary {
+    background: linear-gradient(135deg, var(--bs-primary), rgba(var(--bs-primary-rgb), 0.8));
+}
+
+.auth-divider {
+    text-align: center;
+    position: relative;
+    margin: 2rem 0;
+}
+
+.auth-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background: var(--bs-border-color);
+}
+
+.auth-divider span {
+    background: var(--bs-body-bg);
+    padding: 0 1rem;
+    color: var(--bs-secondary);
+    position: relative;
+}
+
+.auth-social-btn {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.auth-social-btn:hover {
+    background: var(--bs-gray-100);
+    border-color: var(--bs-gray-300);
+}
+
+/* Dark theme support */
+[data-bs-theme="dark"] .auth-wrapper {
+    background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.15), rgba(0, 0, 0, 0.2));
+}
+
+[data-bs-theme="dark"] .auth-card {
+    background: var(--bs-dark);
+}
+
+[data-bs-theme="dark"] .auth-input-group .form-control {
+    background-color: var(--bs-dark);
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .auth-input-group .form-control:focus {
+    background-color: var(--bs-gray-800);
+}
+
+[data-bs-theme="dark"] .auth-social-btn {
+    background: var(--bs-dark);
+    border-color: var(--bs-gray-700);
+}
+
+[data-bs-theme="dark"] .auth-social-btn:hover {
+    background: var(--bs-gray-800);
+    border-color: var(--bs-gray-600);
+}
+
+/* Auth Forms */
+.auth-card {
+    border: none !important;
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.1);
+    background: var(--bs-body-bg);
+    overflow: hidden;
+    transition: transform .3s var(--ease-base);
+}
+
+.auth-card:hover {
+    transform: translateY(-5px);
+}
+
+.auth-card .card-body {
+    padding: 2.5rem;
+}
+
+.auth-form .form-control,
+.auth-form .input-group-text {
+    border: 1px solid var(--bs-border-color);
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+}
+
+.auth-form .input-group-text {
+    background: var(--bs-gray-100);
+    color: var(--bs-gray-600);
+}
+
+.auth-form .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(37,99,235,.1);
+}
+
+.auth-form .btn {
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+[data-bs-theme="dark"] .auth-card {
+    background: var(--bs-gray-900);
+    box-shadow: 0 8px 30px rgba(0,0,0,.2);
+}
+
+[data-bs-theme="dark"] .auth-form .input-group-text {
+    background: var(--bs-gray-800);
+    border-color: var(--bs-gray-700);
+    color: var(--bs-gray-400);
+}
+
+[data-bs-theme="dark"] .auth-form .form-control {
+    background: var(--bs-gray-800);
+    border-color: var(--bs-gray-700);
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .auth-form .form-control:focus {
+    background: var(--bs-gray-700);
+    border-color: var(--primary-color);
+}
 
 /* Dropdowns */
 .dropdown-menu { opacity:0; transform: translateY(-10px); transition: all .3s cubic-bezier(.4,0,.2,1); border:none; box-shadow: 0 10px 25px rgba(0,0,0,.1); border-radius:12px; padding:8px 0; margin-top:8px; }
@@ -41,30 +383,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line
 /* Cards & lists */
 .article-card { transition: transform .3s ease, box-shadow .3s ease, background-color .4s cubic-bezier(.4,0,.2,1), border-color .4s cubic-bezier(.4,0,.2,1); border:none; border-radius:12px; overflow:hidden; height:100%; }
 .article-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,.1); }
-.article-image { height:200px; width:100%; object-fit: cover; }
+.article-image { height:180px; width:100%; object-fit: cover; }
 .category-badge { background: var(--accent-color); color:#fff; padding:4px 12px; border-radius:20px; font-size:.8rem; font-weight:500; }
 .sidebar-widget { background: var(--bs-gray-50); border-radius:12px; padding:25px; margin-bottom:30px; transition: background-color .4s cubic-bezier(.4,0,.2,1), border-color .4s cubic-bezier(.4,0,.2,1); }
 [data-bs-theme="dark"] .sidebar-widget { background: var(--bs-gray-800); }
 .comment-item { border-left:3px solid var(--primary-color); padding-left:20px; margin-bottom:25px; }
 
-/* Footer */
-.footer { background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%); color: #e2e8f0; margin-top:80px; position:relative; overflow:hidden; }
-.footer::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background: linear-gradient(90deg, transparent, #4a5568, transparent); }
-.footer a { color:#cbd5e0 !important; transition: color .3s ease; }
-.footer a:hover { color:#ffffff !important; }
-/* Improve contrast for footer text */
-.footer p, .footer li, .footer .text-muted { color:#e2e8f0 !important; }
-.social-links a { display:inline-block; width:40px; height:40px; border-radius:50%; text-align:center; line-height:40px; background:#6b7280; color:#fff; margin:0 5px; position:relative; overflow:hidden; transition: all .4s cubic-bezier(.4,0,.2,1); }
-.social-links a::before { content:''; position:absolute; inset:0; border-radius:50%; transform: scale(0); transition: transform .4s cubic-bezier(.4,0,.2,1); z-index:0; }
-.social-links a i { position:relative; z-index:1; transition: transform .3s ease; }
-.social-links a:hover { transform: translateY(-3px) scale(1.1); box-shadow: 0 8px 20px rgba(0,0,0,.3); }
-.social-links a:hover::before { transform: scale(1); }
-.social-links a:hover i { transform: scale(1.1); }
-/* Brand colors */
-.social-links a:nth-child(1)::before { background:#1877f2; }
-.social-links a:nth-child(2)::before { background:#1da1f2; }
-.social-links a:nth-child(3)::before { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
-.social-links a:nth-child(4)::before { background:#0077b5; }
+/* Footer (new minimal styles; layout handled above) */
+.footer { flex-shrink: 0; }
+.footer a.text-muted { transition: color .2s ease; }
+.footer a.text-muted:hover { color: #ffffff !important; }
 
 /* Theme toggle */
 .theme-toggle { background:none; border:1px solid var(--bs-border-color); border-radius:50px; padding:8px 12px; cursor:pointer; transition: all .3s ease; }

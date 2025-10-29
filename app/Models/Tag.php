@@ -6,7 +6,25 @@ use PDO;
 
 class Tag extends Model
 {
-    
+    /**
+     * Get popular tags with usage count
+     */
+    public function getPopularTags(int $limit = 20): array
+    {
+        $stmt = $this->db->prepare('
+            SELECT t.*, COUNT(DISTINCT at.article_id) as count
+            FROM tags t
+            LEFT JOIN article_tags at ON t.id = at.tag_id
+            LEFT JOIN articles a ON at.article_id = a.id AND a.status = "published"
+            GROUP BY t.id
+            HAVING count > 0
+            ORDER BY count DESC
+            LIMIT ?
+        ');
+        $stmt->execute([$limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /**
      * Get all tags
      */
