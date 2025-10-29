@@ -224,6 +224,16 @@ class Auth
             return false;
         }
     }
+    public static function isAdmin(): bool
+    {
+        if (!self::check()) {
+            return false;
+        }
+        
+        $user = self::user();
+        // Giả sử role_id = 1 là admin (điều chỉnh theo logic của bạn)
+        return isset($user['role_id']) && $user['role_id'] == 3;
+    }
 }
 
 

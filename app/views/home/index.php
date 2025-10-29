@@ -3,17 +3,13 @@
     <div class="container-fluid py-5">
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <?php if (isset($user)): ?>
-                <div class="user-welcome slide-in-left mb-4" style="--animation-delay: 0.1s">
-                    <h2 class="h4 mb-3">Xin chào, <?= htmlspecialchars($user['name']) ?>!</h2>
-                    <p class="text-light mb-3">
-                        <i class="bi bi-envelope me-2"></i><?= htmlspecialchars($user['email']) ?>
-                        <?php if ($user['role_id'] === 3): ?>
-                            <span class="badge bg-warning ms-2">
-                                <i class="bi bi-shield-check me-1"></i>Quản trị viên
-                            </span>
-                        <?php endif; ?>
-                    </p>
+                <?php if (\App\Core\Auth::check()): ?>
+                <div class="user-welcome mb-4">
+                <h2 class="h4 mb-3">Xin chào, <?= htmlspecialchars(\App\Core\Auth::user()['name']) ?>!</h2>
+                <p class="text-light mb-3">Email: <?= htmlspecialchars(\App\Core\Auth::user()['email']) ?></p>
+                <?php if (\App\Core\Auth::isAdmin()): ?>
+                <span class="badge bg-warning mb-3">Quản trị viên</span>
+                <?php endif; ?>
                 </div>
                 <?php endif; ?>
                 <h1 class="display-4 fw-bold mb-4 text-gradient slide-in-left" style="--animation-delay: 0.2s">
