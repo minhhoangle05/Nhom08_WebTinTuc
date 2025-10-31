@@ -86,10 +86,23 @@ $router->post('/article/:id/save-draft', 'ArticleController@saveDraft');
 // Admin routes
 $router->get('/admin/dashboard', 'AdminController@index');
 $router->get('/admin', 'AdminController@index'); // Redirect from /admin to /admin/dashboard
+$router->get('/admin/comments', 'AdminController@commentsModerationPage');
+$router->get('/admin/comments/moderation', 'AdminController@commentsModeration');
+$router->get('/admin/comments/reports', 'AdminController@commentsReports');
+$router->post('/admin/comments/resolve-report', 'AdminController@resolveReport');
 
 // Account / Profile
 $router->get('/account/profile', 'ProfileController@show');
 $router->post('/account/profile', 'ProfileController@update');
+
+// Comment routes
+$router->get('/comment/getComments', 'CommentController@getComments');
+$router->post('/comment/create', 'CommentController@create');
+$router->post('/comment/update', 'CommentController@update');
+$router->post('/comment/delete', 'CommentController@delete');
+$router->post('/comment/toggleLike', 'CommentController@toggleLike');
+$router->post('/comment/report', 'CommentController@report');
+$router->post('/comment/moderate', 'CommentController@moderate');
 
 // Dispatch request
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
