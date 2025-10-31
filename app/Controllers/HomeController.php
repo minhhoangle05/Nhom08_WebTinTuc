@@ -8,6 +8,7 @@ class HomeController extends Controller
     public function index(): void
     {
         $categories = [];
+        
         try {
             $categoryModel = $this->model('Category');
             $categories = $categoryModel->getPopularCategories();
