@@ -69,17 +69,52 @@ $router->put('/article/:id', 'ArticleController@update');
 $router->delete('/article/:id', 'ArticleController@delete');
 $router->post('/article/:id/delete', 'ArticleController@delete');
 
+
 // Preview và bản nháp
 $router->get('/article/preview/:id', 'ArticleController@preview');
 $router->get('/articles/drafts', 'ArticleController@drafts');
 $router->get('/article/draft/:id', 'ArticleController@editDraft');
 $router->put('/article/draft/:id', 'ArticleController@updateDraft');
+$router->post('/article/:id/update', 'ArticleController@update');
 $router->delete('/article/draft/:id', 'ArticleController@deleteDraft');
+$router->get('/admin/dashboard', 'AdminController@index');
+$router->get('/admin', 'AdminController@index');
 
 // Quản lý trạng thái
 $router->post('/article/:id/publish', 'ArticleController@publish');
 $router->post('/article/:id/unpublish', 'ArticleController@unpublish');
 $router->post('/article/:id/save-draft', 'ArticleController@saveDraft');
+// Quản lý bài viết
+$router->get('/admin/articles', 'AdminController@articles');
+$router->get('/admin/articles/:id', 'AdminController@articleDetail');
+$router->post('/admin/articles/:id/delete', 'AdminController@deleteArticle');
+
+// Quản lý người dùng
+$router->get('/admin/users', 'AdminController@users');
+$router->get('/admin/users/:id', 'AdminController@userDetail');
+$router->get('/admin/users/create', 'AdminController@createUserForm');
+$router->post('/admin/users/create', 'AdminController@createUser');
+$router->post('/admin/users/:id/delete', 'AdminController@deleteUser');
+$router->post('/admin/users/:id/toggle-role', 'AdminController@toggleUserRole');
+
+// Quản lý danh mục
+$router->get('/admin/categories', 'AdminController@categories');
+$router->post('/admin/categories/create', 'AdminController@createCategory');
+$router->post('/admin/categories/:id/update', 'AdminController@updateCategory');
+$router->post('/admin/categories/:id/delete', 'AdminController@deleteCategory');
+
+// Quản lý tags
+$router->get('/admin/tags', 'AdminController@tags');
+$router->post('/admin/tags/create', 'AdminController@createTag');
+$router->post('/admin/tags/:id/delete', 'AdminController@deleteTag');
+
+// Quản lý bình luận
+$router->get('/admin/comments', 'AdminController@comments');
+$router->post('/admin/comments/:id/delete', 'AdminController@deleteComment');
+
+// Thống kê nâng cao
+$router->get('/admin/statistics', 'AdminController@statistics');
+$router->get('/admin/statistics/views', 'AdminController@viewStatistics');
 
 
 
