@@ -216,7 +216,7 @@
                                                title="Chi tiết">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="<?= BASE_URL ?>/article/<?= $stat['id'] ?>/edit" 
+                                            <a href="<?= BASE_URL ?>/articles/edit/<?= $article['id'] ?>"
                                                class="btn btn-outline-secondary"
                                                title="Sửa">
                                                 <i class="bi bi-pencil"></i>

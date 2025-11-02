@@ -258,17 +258,6 @@ class Article extends Model
     }
 
     /**
-     * Count articles by category
-     */
-    public function countByCategory(int $categoryId): int
-    {
-        return $this->countSearch([
-            'category_id' => $categoryId,
-            'status' => self::STATUS_PUBLISHED
-        ]);
-    }
-
-    /**
      * Find article by ID
      */
     public function findById(int $id): ?array
@@ -381,16 +370,6 @@ class Article extends Model
             error_log("Error finding related articles: " . $e->getMessage());
             return [];
         }
-    }
-
-    /**
-     * Get recent articles by user
-     */
-    public function getByUser(int $userId, int $limit = 10, int $offset = 0): array
-    {
-        return $this->search([
-            'user_id' => $userId
-        ], $limit, $offset);
     }
 
     /**
@@ -543,5 +522,35 @@ class Article extends Model
             $stmt->execute([$slug]);
         }
         return $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Get articles by user
+     */
+    public function getByUser(int $userId, int $limit = 10): array
+    {
+        $stmt = $this->db->prepare('
+            SELECT a.*, 
+                   u.name as author_name,
+                   c.name as category_name,
+                   (SELECT COUNT(*) FROM comments WHERE article_id = a.id) as comment_count
+            FROM articles a
+            LEFT JOIN users u ON a.user_id = u.id
+            LEFT JOIN categories c ON a.category_id = c.id
+            WHERE a.user_id = ?
+            ORDER BY a.created_at DESC
+            LIMIT ?
+        ');
+        $stmt->execute([$userId, $limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    /**
+     * Count articles by category
+     */
+    public function countByCategory(int $categoryId): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM articles WHERE category_id = ?');
+        $stmt->execute([$categoryId]);
+        return (int)$stmt->fetchColumn();
     }
 }

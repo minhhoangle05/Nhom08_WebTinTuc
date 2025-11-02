@@ -166,7 +166,7 @@
                                         <td class="text-end"><?= number_format($article['views']) ?></td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="<?= BASE_URL ?>/article/<?= $article['id'] ?>/edit" 
+                                                <a href="<?= BASE_URL ?>/articles/edit/<?= $article['id'] ?>"
                                                    class="btn btn-outline-secondary" 
                                                    title="Sửa">
                                                     <i class="bi bi-pencil"></i>

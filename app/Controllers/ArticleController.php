@@ -138,7 +138,7 @@ class ArticleController extends Controller
     public function search(): void
     {
         $page = max(1, (int)($_GET['page'] ?? 1));
-        $categorySlug = $_GET['category'] ?? null;
+        $categoryParam = $_GET['category'] ?? null;
         
         $filters = [
             'q' => $_GET['q'] ?? null,
@@ -146,10 +146,17 @@ class ArticleController extends Controller
             'sort' => $_GET['sort'] ?? 'latest'
         ];
 
-        // Nếu có category, lấy thông tin category
+        // Nếu có category, tìm theo slug hoặc name
         $currentCategory = null;
-        if ($categorySlug) {
-            $currentCategory = $this->categoryModel->findBySlug($categorySlug);
+        if ($categoryParam) {
+            // Thử tìm theo slug trước
+            $currentCategory = $this->categoryModel->findBySlug($categoryParam);
+            
+            // Nếu không tìm thấy, thử tìm theo name
+            if (!$currentCategory) {
+                $currentCategory = $this->categoryModel->findByName($categoryParam);
+            }
+            
             if ($currentCategory) {
                 $filters['category_id'] = $currentCategory['id'];
             }
@@ -187,9 +194,6 @@ class ArticleController extends Controller
             'currentPage' => $page,
             'totalPages' => $totalPages,
             'total' => $total,
-            'baseUrl' => $baseUrl,
-            'currentPage' => $page,
-            'totalPages' => $totalPages,
             'baseUrl' => $baseUrl
         ]);
     }

@@ -106,4 +106,14 @@ class Category extends Model
         $stmt = $this->db->prepare('DELETE FROM categories WHERE id = ?');
         return $stmt->execute([$id]);
     }
+    /**
+     *  Find category by name
+     */
+    public function findByName(string $name): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM categories WHERE name = ? LIMIT 1');
+        $stmt->execute([$name]);
+        $category = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $category ?: null;
+    }
 }
