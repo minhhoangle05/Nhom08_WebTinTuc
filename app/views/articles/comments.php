@@ -258,7 +258,26 @@
         </div>
     </div>
 </div>
+<!-- Initialize user data for JavaScript -->
+<script>
+// Define global variables for JavaScript
+const BASE_URL = '<?= BASE_URL ?>';
 
+// Set current user info
+<?php if (\App\Core\Auth::check()): ?>
+window.currentUser = {
+    id: <?= \App\Core\Auth::user()['id'] ?>,
+    name: '<?= addslashes(\App\Core\Auth::user()['name']) ?>',
+    email: '<?= addslashes(\App\Core\Auth::user()['email']) ?>',
+    role_id: <?= \App\Core\Auth::user()['role_id'] ?>
+};
+<?php else: ?>
+window.currentUser = null;
+<?php endif; ?>
+</script>
+
+<!-- Load comment system script -->
+<script src="<?= BASE_URL ?>/js/comments.js"></script>
 <style>
 /* Comments Section Styles */
 .comments-section {
@@ -486,21 +505,3 @@
 }
 </style>
 
-<!-- Initialize user data for JavaScript -->
-<script>
-    // Set user data before loading the comment script
-    <?php if (\App\Core\Auth::check()): ?>
-        window.currentUserId = <?= \App\Core\Auth::user()['id'] ?>;
-        window.currentUserName = "<?= htmlspecialchars(\App\Core\Auth::user()['name']) ?>";
-        window.isAdmin = <?= \App\Core\Auth::isAdmin() ? 'true' : 'false' ?>;
-    <?php else: ?>
-        window.currentUserId = null;
-        window.currentUserName = null;
-        window.isAdmin = false;
-    <?php endif; ?>
-    window.baseUrl = '<?= BASE_URL ?>';
-    window.csrfToken = '<?= \App\Core\CSRF::token() ?>';
-</script>
-
-<!-- Load comment system script -->
-<script src="<?= BASE_URL ?>/js/comments.js"></script>

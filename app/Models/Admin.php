@@ -207,27 +207,7 @@ class Admin extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function emailExists(string $email): bool
-    {
-        $stmt = $this->db->prepare('SELECT COUNT(*) FROM users WHERE email = ?');
-        $stmt->execute([$email]);
-        return $stmt->fetchColumn() > 0;
-    }
 
-    public function createUser(array $data): int
-    {
-        $stmt = $this->db->prepare('
-            INSERT INTO users (name, email, password, role_id, created_at)
-            VALUES (?, ?, ?, ?, NOW())
-        ');
-        $stmt->execute([
-            $data['name'],
-            $data['email'],
-            $data['password'],
-            $data['role_id']
-        ]);
-        return (int)$this->db->lastInsertId();
-    }
 
     public function updateUserRole(int $userId, int $roleId): bool
     {
@@ -404,4 +384,51 @@ class Admin extends Model
         ');
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+ * Kiểm tra email đã tồn tại chưa
+ */
+public function emailExists(string $email): bool
+{
+    $stmt = $this->db->prepare('SELECT COUNT(*) FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    return (int)$stmt->fetchColumn() > 0;
+}
+
+/**
+ * Tạo người dùng mới
+ */
+public function createUser(array $data): bool
+{
+    $stmt = $this->db->prepare('
+        INSERT INTO users (name, email, password_hash, role_id, created_at) 
+        VALUES (?, ?, ?, ?, NOW())
+    ');
+    
+    return $stmt->execute([
+        $data['name'],
+        $data['email'],
+        $data['password'],
+        $data['role_id']
+    ]);
+}
+
+/**
+ * Cập nhật thông tin người dùng
+ */
+public function updateUser(int $userId, array $data): bool
+{
+    $fields = [];
+    $values = [];
+    
+    foreach ($data as $field => $value) {
+        $fields[] = "{$field} = ?";
+        $values[] = $value;
+    }
+    
+    $values[] = $userId;
+    
+    $stmt = $this->db->prepare("UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?");
+    return $stmt->execute($values);
+}
 }

@@ -122,10 +122,6 @@ $router->get('/admin/articles', 'AdminController@articles');
 $router->get('/admin/articles/:id', 'AdminController@articleDetail');
 $router->post('/admin/articles/:id/delete', 'AdminController@deleteArticle');
 
-// Admin - Users Management
-$router->get('/admin/users', 'AdminController@users');
-$router->get('/admin/users/:id', 'AdminController@userDetail');
-$router->post('/admin/users/:id/delete', 'AdminController@deleteUser');
 
 // Admin - Categories Management
 $router->get('/admin/categories', 'AdminController@categories');
@@ -151,6 +147,15 @@ $router->get('/admin/statistics', 'AdminController@statistics');
 $router->get('/admin/statistics/views', 'AdminController@viewStatistics');
 $router->get('/admin/statistics/articles', 'AdminController@articleStatistics');
 $router->get('/admin/statistics/users', 'AdminController@userStatistics');
+
+// Admin - Users Management
+$router->get('/admin/users', 'AdminController@users');
+$router->get('/admin/users/create', 'AdminController@createUserPage');
+$router->post('/admin/users/create', 'AdminController@createUser');
+$router->get('/admin/users/:id', 'AdminController@userDetail');
+$router->get('/admin/users/:id/edit', 'AdminController@editUserPage');
+$router->post('/admin/users/:id/update', 'AdminController@updateUser');
+$router->post('/admin/users/:id/delete', 'AdminController@deleteUser');
 
 // ========================================
 // DISPATCH REQUEST

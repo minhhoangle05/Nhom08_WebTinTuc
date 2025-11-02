@@ -5,12 +5,11 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Core\CSRF;
 use App\Core\ActivityLogger;
-use App\Core\Session;
 use App\Models\Admin;
 use App\Models\Article;
 use App\Models\Category;
 use App\Models\Tag;
-use App\Models\User;
+use App\Models\Comment;
 
 class AdminController extends Controller
 {
@@ -44,8 +43,7 @@ class AdminController extends Controller
             'latestArticles' => $this->adminModel->getLatestArticles(5),
             'latestUsers' => $this->adminModel->getLatestUsers(5),
             'categoryStats' => $this->adminModel->getCategoryStatistics(),
-            'popularArticles' => $this->adminModel->getPopularArticles(5),
-            'csrf' => CSRF::token()
+            'popularArticles' => $this->adminModel->getPopularArticles(5)
         ]);
     }
 
@@ -58,32 +56,14 @@ class AdminController extends Controller
         $limit = 20;
         $offset = ($page - 1) * $limit;
         
-        // Lấy filters
-        $filters = [
-            'q' => $_GET['q'] ?? null,
-            'category_id' => $_GET['category_id'] ?? null,
-            'user_id' => $_GET['user_id'] ?? null,
-            'date_from' => $_GET['date_from'] ?? null,
-            'date_to' => $_GET['date_to'] ?? null,
-            'sort' => $_GET['sort'] ?? 'latest'
-        ];
-        
         $articleModel = new Article();
-        $articles = $articleModel->search($filters, $limit, $offset);
-        $total = $articleModel->countSearch($filters);
+        $articles = $articleModel->search(['status' => 'all'], $limit, $offset);
+        $total = $articleModel->countSearch(['status' => 'all']);
         $totalPages = ceil($total / $limit);
-
-        // Lấy categories và users cho filter
-        $categoryModel = new Category();
-        $categories = $categoryModel->all();
-        $users = $this->adminModel->getAllAuthors();
 
         $this->view('admin/articles/index', [
             'title' => 'Quản lý bài viết',
             'articles' => $articles,
-            'categories' => $categories,
-            'users' => $users,
-            'filters' => $filters,
             'currentPage' => $page,
             'totalPages' => $totalPages,
             'total' => $total,
@@ -143,8 +123,7 @@ class AdminController extends Controller
 
         if ($articleModel->delete((int)$id)) {
             ActivityLogger::log('article_delete', (int)$id);
-            Session::flash('success', 'Đã xóa bài viết thành công');
-            header('Location: ' . BASE_URL . '/admin/articles');
+            header('Location: ' . BASE_URL . '/admin/articles?success=deleted');
         } else {
             http_response_code(500);
             echo 'Không thể xóa bài viết';
@@ -160,32 +139,25 @@ class AdminController extends Controller
         $limit = 20;
         $offset = ($page - 1) * $limit;
 
-        // Filters
-        $search = $_GET['search'] ?? null;
-        $roleId = $_GET['role_id'] ?? null;
-
-        $users = $this->adminModel->getUsers($limit, $offset, $search, $roleId);
-        $total = $this->adminModel->countUsers($search, $roleId);
+        $users = $this->adminModel->getUsers($limit, $offset);
+        $total = $this->adminModel->countUsers();
         $totalPages = ceil($total / $limit);
 
         $this->view('admin/users/index', [
             'title' => 'Quản lý người dùng',
             'users' => $users,
-            'search' => $search,
-            'roleId' => $roleId,
             'currentPage' => $page,
             'totalPages' => $totalPages,
-            'total' => $total,
-            'csrf' => CSRF::token()
+            'total' => $total
         ]);
     }
 
-    public function createUserForm(): void
+    public function createUserPage(): void
     {
         if (!$this->checkAdminAccess()) return;
 
         $this->view('admin/users/create', [
-            'title' => 'Thêm người dùng mới',
+            'title' => 'Tạo người dùng mới',
             'csrf' => CSRF::token()
         ]);
     }
@@ -196,53 +168,144 @@ class AdminController extends Controller
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
+            echo 'Method not allowed';
             return;
         }
 
         if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            Session::flash('error', 'Invalid CSRF token');
-            header('Location: ' . BASE_URL . '/admin/users/create');
+            http_response_code(400);
+            echo 'Invalid CSRF token';
             return;
         }
 
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
-        $roleId = (int)($_POST['role_id'] ?? 2); // Default: user
+        $roleId = (int)($_POST['role_id'] ?? 2);
 
         // Validation
         if (empty($name) || empty($email) || empty($password)) {
-            Session::flash('error', 'Vui lòng điền đầy đủ thông tin');
-            header('Location: ' . BASE_URL . '/admin/users/create');
+            header('Location: ' . BASE_URL . '/admin/users/create?error=missing_fields');
             return;
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            Session::flash('error', 'Email không hợp lệ');
-            header('Location: ' . BASE_URL . '/admin/users/create');
+            header('Location: ' . BASE_URL . '/admin/users/create?error=invalid_email');
             return;
         }
 
-        // Check email exists
+        if (strlen($password) < 6) {
+            header('Location: ' . BASE_URL . '/admin/users/create?error=password_short');
+            return;
+        }
+
+        // Check if email exists
         if ($this->adminModel->emailExists($email)) {
-            Session::flash('error', 'Email đã tồn tại');
-            header('Location: ' . BASE_URL . '/admin/users/create');
+            header('Location: ' . BASE_URL . '/admin/users/create?error=email_exists');
             return;
         }
 
-        $userId = $this->adminModel->createUser([
+        // Create user
+        $userData = [
             'name' => $name,
             'email' => $email,
             'password' => password_hash($password, PASSWORD_DEFAULT),
             'role_id' => $roleId
-        ]);
+        ];
 
-        if ($userId) {
-            Session::flash('success', 'Đã tạo người dùng thành công');
-            header('Location: ' . BASE_URL . '/admin/users');
+        if ($this->adminModel->createUser($userData)) {
+            header('Location: ' . BASE_URL . '/admin/users?success=created');
         } else {
-            Session::flash('error', 'Không thể tạo người dùng');
-            header('Location: ' . BASE_URL . '/admin/users/create');
+            header('Location: ' . BASE_URL . '/admin/users/create?error=create_failed');
+        }
+    }
+
+    public function editUserPage(string $id): void
+    {
+        if (!$this->checkAdminAccess()) return;
+
+        $user = $this->adminModel->getUserDetail((int)$id);
+
+        if (!$user) {
+            http_response_code(404);
+            echo 'Người dùng không tồn tại';
+            return;
+        }
+
+        $this->view('admin/users/edit', [
+            'title' => 'Chỉnh sửa người dùng - ' . $user['name'],
+            'user' => $user,
+            'csrf' => CSRF::token()
+        ]);
+    }
+
+    public function updateUser(string $id): void
+    {
+        if (!$this->checkAdminAccess()) return;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo 'Method not allowed';
+            return;
+        }
+
+        if (!CSRF::validate($_POST['csrf'] ?? null)) {
+            http_response_code(400);
+            echo 'Invalid CSRF token';
+            return;
+        }
+
+        $userId = (int)$id;
+        $user = $this->adminModel->getUserDetail($userId);
+
+        if (!$user) {
+            http_response_code(404);
+            echo 'Người dùng không tồn tại';
+            return;
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $roleId = (int)($_POST['role_id'] ?? $user['role_id']);
+
+        // Validation
+        if (empty($name) || empty($email)) {
+            header('Location: ' . BASE_URL . '/admin/users/' . $userId . '/edit?error=missing_fields');
+            return;
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            header('Location: ' . BASE_URL . '/admin/users/' . $userId . '/edit?error=invalid_email');
+            return;
+        }
+
+        // Check if email exists (excluding current user)
+        if ($email !== $user['email'] && $this->adminModel->emailExists($email)) {
+            header('Location: ' . BASE_URL . '/admin/users/' . $userId . '/edit?error=email_exists');
+            return;
+        }
+
+        // Update data
+        $updateData = [
+            'name' => $name,
+            'email' => $email,
+            'role_id' => $roleId
+        ];
+
+        // Update password if provided
+        if (!empty($password)) {
+            if (strlen($password) < 6) {
+                header('Location: ' . BASE_URL . '/admin/users/' . $userId . '/edit?error=password_short');
+                return;
+            }
+            $updateData['password'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+
+        if ($this->adminModel->updateUser($userId, $updateData)) {
+            header('Location: ' . BASE_URL . '/admin/users/' . $userId . '?success=updated');
+        } else {
+            header('Location: ' . BASE_URL . '/admin/users/' . $userId . '/edit?error=update_failed');
         }
     }
 
@@ -271,39 +334,6 @@ class AdminController extends Controller
         ]);
     }
 
-    public function toggleUserRole(string $id): void
-    {
-        if (!$this->checkAdminAccess()) return;
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            return;
-        }
-
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo 'Invalid CSRF token';
-            return;
-        }
-
-        $userId = (int)$id;
-        $newRoleId = (int)($_POST['role_id'] ?? 2);
-
-        if (Auth::user()['id'] === $userId) {
-            http_response_code(400);
-            echo 'Không thể thay đổi vai trò của chính bạn';
-            return;
-        }
-
-        if ($this->adminModel->updateUserRole($userId, $newRoleId)) {
-            Session::flash('success', 'Đã cập nhật vai trò người dùng');
-            header('Location: ' . BASE_URL . '/admin/users/' . $userId);
-        } else {
-            http_response_code(500);
-            echo 'Không thể cập nhật vai trò';
-        }
-    }
-
     public function deleteUser(string $id): void
     {
         if (!$this->checkAdminAccess()) return;
@@ -329,8 +359,7 @@ class AdminController extends Controller
         }
 
         if ($this->adminModel->deleteUser($userId)) {
-            Session::flash('success', 'Đã xóa người dùng thành công');
-            header('Location: ' . BASE_URL . '/admin/users');
+            header('Location: ' . BASE_URL . '/admin/users?success=deleted');
         } else {
             http_response_code(500);
             echo 'Không thể xóa người dùng';
@@ -378,8 +407,7 @@ class AdminController extends Controller
 
         $categoryModel = new Category();
         if ($categoryModel->create(['name' => $name, 'slug' => $slug])) {
-            Session::flash('success', 'Đã tạo danh mục thành công');
-            header('Location: ' . BASE_URL . '/admin/categories');
+            header('Location: ' . BASE_URL . '/admin/categories?success=created');
         } else {
             http_response_code(500);
             echo 'Không thể tạo danh mục';
@@ -412,8 +440,7 @@ class AdminController extends Controller
 
         $categoryModel = new Category();
         if ($categoryModel->update((int)$id, ['name' => $name, 'slug' => $slug])) {
-            Session::flash('success', 'Đã cập nhật danh mục thành công');
-            header('Location: ' . BASE_URL . '/admin/categories');
+            header('Location: ' . BASE_URL . '/admin/categories?success=updated');
         } else {
             http_response_code(500);
             echo 'Không thể cập nhật danh mục';
@@ -446,8 +473,7 @@ class AdminController extends Controller
 
         $categoryModel = new Category();
         if ($categoryModel->delete((int)$id)) {
-            Session::flash('success', 'Đã xóa danh mục thành công');
-            header('Location: ' . BASE_URL . '/admin/categories');
+            header('Location: ' . BASE_URL . '/admin/categories?success=deleted');
         } else {
             http_response_code(500);
             echo 'Không thể xóa danh mục';
@@ -495,11 +521,43 @@ class AdminController extends Controller
 
         $tagModel = new Tag();
         if ($tagModel->create(['name' => $name, 'slug' => $slug])) {
-            Session::flash('success', 'Đã tạo thẻ thành công');
-            header('Location: ' . BASE_URL . '/admin/tags');
+            header('Location: ' . BASE_URL . '/admin/tags?success=created');
         } else {
             http_response_code(500);
             echo 'Không thể tạo thẻ';
+        }
+    }
+
+    public function updateTag(string $id): void
+    {
+        if (!$this->checkAdminAccess()) return;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            return;
+        }
+
+        if (!CSRF::validate($_POST['csrf'] ?? null)) {
+            http_response_code(400);
+            echo 'Invalid CSRF token';
+            return;
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $slug = trim($_POST['slug'] ?? '');
+
+        if (empty($name) || empty($slug)) {
+            http_response_code(400);
+            echo 'Tên và slug không được để trống';
+            return;
+        }
+
+        $tagModel = new Tag();
+        if ($tagModel->update((int)$id, ['name' => $name, 'slug' => $slug])) {
+            header('Location: ' . BASE_URL . '/admin/tags?success=updated');
+        } else {
+            http_response_code(500);
+            echo 'Không thể cập nhật thẻ';
         }
     }
 
@@ -520,8 +578,7 @@ class AdminController extends Controller
 
         $tagModel = new Tag();
         if ($tagModel->delete((int)$id)) {
-            Session::flash('success', 'Đã xóa thẻ thành công');
-            header('Location: ' . BASE_URL . '/admin/tags');
+            header('Location: ' . BASE_URL . '/admin/tags?success=deleted');
         } else {
             http_response_code(500);
             echo 'Không thể xóa thẻ';
@@ -529,85 +586,122 @@ class AdminController extends Controller
     }
 
     // ========== COMMENTS MANAGEMENT ==========
-    public function comments(): void
+    
+    /**
+     * Trang quản lý bình luận (UI)
+     */
+    public function commentsModerationPage(): void
     {
         if (!$this->checkAdminAccess()) return;
 
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $limit = 20;
-        $offset = ($page - 1) * $limit;
-
-        $comments = $this->adminModel->getComments($limit, $offset);
-        $total = $this->adminModel->countComments();
-        $totalPages = ceil($total / $limit);
-
-        $this->view('admin/comments/index', [
-            'title' => 'Quản lý bình luận',
-            'comments' => $comments,
-            'currentPage' => $page,
-            'totalPages' => $totalPages,
-            'total' => $total,
-            'csrf' => CSRF::token()
+        $this->view('admin/comments', [
+            'title' => 'Quản lý bình luận'
         ]);
     }
 
-    public function deleteComment(string $id): void
+    /**
+     * API: Lấy danh sách bình luận cần kiểm duyệt
+     */
+    public function commentsModeration(): void
     {
         if (!$this->checkAdminAccess()) return;
 
+        header('Content-Type: application/json');
+
+        try {
+            $commentModel = new Comment();
+            $comments = $commentModel->getForModeration(50, 0);
+
+            echo json_encode([
+                'success' => true,
+                'comments' => $comments
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error in commentsModeration: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Có lỗi xảy ra khi tải bình luận'
+            ]);
+        }
+    }
+
+    /**
+     * API: Lấy danh sách báo cáo bình luận
+     */
+    public function commentsReports(): void
+    {
+        if (!$this->checkAdminAccess()) return;
+
+        header('Content-Type: application/json');
+
+        try {
+            $commentModel = new Comment();
+            $reports = $commentModel->getReports(50, 0);
+
+            echo json_encode([
+                'success' => true,
+                'reports' => $reports
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error in commentsReports: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Có lỗi xảy ra khi tải báo cáo'
+            ]);
+        }
+    }
+
+    /**
+     * API: Xử lý báo cáo bình luận
+     */
+    public function resolveReport(): void
+    {
+        if (!$this->checkAdminAccess()) return;
+
+        header('Content-Type: application/json');
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
+            echo json_encode(['success' => false, 'error' => 'Method not allowed']);
             return;
         }
 
         if (!CSRF::validate($_POST['csrf'] ?? null)) {
             http_response_code(400);
-            echo 'Invalid CSRF token';
+            echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']);
             return;
         }
 
-        if ($this->adminModel->deleteComment((int)$id)) {
-            ActivityLogger::log('comment_delete', (int)$id);
-            Session::flash('success', 'Đã xóa bình luận thành công');
-            header('Location: ' . BASE_URL . '/admin/comments');
-        } else {
-            http_response_code(500);
-            echo 'Không thể xóa bình luận';
+        $reportId = (int)($_POST['report_id'] ?? 0);
+        $status = $_POST['status'] ?? 'resolved';
+
+        if (!$reportId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Report ID is required']);
+            return;
         }
-    }
 
-    // ========== STATISTICS ==========
-    public function viewStatistics(): void
-    {
-        if (!$this->checkAdminAccess()) return;
-
-        $days = (int)($_GET['days'] ?? 7);
-        $days = min(max($days, 1), 90); // Giới hạn 1-90 ngày
-
-        // Filters
-        $filters = [
-            'article_id' => $_GET['article_id'] ?? null,
-            'user_id' => $_GET['user_id'] ?? null,
-            'date_from' => $_GET['date_from'] ?? null,
-            'date_to' => $_GET['date_to'] ?? null,
-            'sort' => $_GET['sort'] ?? 'views' // views, date, title
-        ];
-
-        $viewStats = $this->adminModel->getDetailedViewStatistics($days, $filters);
-        
-        // Lấy danh sách bài viết và users cho filter
-        $articleModel = new Article();
-        $articles = $articleModel->all(100, 0); // Top 100 articles
-        $users = $this->adminModel->getAllAuthors();
-
-        $this->view('admin/statistics/views', [
-            'title' => 'Thống kê lượt xem chi tiết',
-            'viewStats' => $viewStats,
-            'articles' => $articles,
-            'users' => $users,
-            'filters' => $filters,
-            'days' => $days,
-            'csrf' => CSRF::token()
-        ]);
+        try {
+            $commentModel = new Comment();
+            if ($commentModel->updateReportStatus($reportId, $status, Auth::user()['id'])) {
+                ActivityLogger::log('comment_report_resolved', $reportId);
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Báo cáo đã được xử lý'
+                ]);
+            } else {
+                throw new \Exception('Không thể cập nhật trạng thái báo cáo');
+            }
+        } catch (\Exception $e) {
+            error_log("Error resolving report: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Có lỗi xảy ra khi xử lý báo cáo'
+            ]);
+        }
     }
 }

@@ -1,10 +1,17 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2><?= htmlspecialchars($title) ?></h2>
+  <a href="<?= BASE_URL ?>/admin/users/create" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Tạo người dùng mới
+  </a>
 </div>
 
 <?php if (isset($_GET['success'])): ?>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-  <?php if ($_GET['success'] === 'deleted'): ?>
+  <?php if ($_GET['success'] === 'created'): ?>
+    Đã tạo người dùng thành công!
+  <?php elseif ($_GET['success'] === 'updated'): ?>
+    Đã cập nhật người dùng thành công!
+  <?php elseif ($_GET['success'] === 'deleted'): ?>
     Đã xóa người dùng thành công!
   <?php endif; ?>
   <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -65,6 +72,10 @@
                 <a href="<?= BASE_URL ?>/admin/users/<?= $user['id'] ?>" 
                    class="btn btn-outline-info" title="Chi tiết">
                   <i class="bi bi-eye"></i>
+                </a>
+                <a href="<?= BASE_URL ?>/admin/users/<?= $user['id'] ?>/edit" 
+                   class="btn btn-outline-warning" title="Sửa">
+                  <i class="bi bi-pencil"></i>
                 </a>
                 <?php if ($user['id'] !== \App\Core\Auth::user()['id']): ?>
                 <button type="button" class="btn btn-outline-danger" 

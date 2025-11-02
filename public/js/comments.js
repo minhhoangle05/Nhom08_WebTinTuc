@@ -1,546 +1,630 @@
-// Comment System - public/js/comments.js
-document.addEventListener('DOMContentLoaded', function() {
-    const articleId = document.querySelector('input[name="article_id"]')?.value;
-    const commentsContainer = document.getElementById('comments-container');
-    const commentForm = document.getElementById('comment-form');
-    const commentContent = document.getElementById('comment-content');
-    const charCount = document.getElementById('char-count');
-    const commentCountEl = document.getElementById('comment-count');
-    const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
-     // ✅ Ngăn chặn script bị chạy lại nhiều lần
-     if (window.__COMMENT_SCRIPT_LOADED__) return;
-     window.__COMMENT_SCRIPT_LOADED__ = true;
-    // Get user data from global window object (set by PHP)
-    const currentUserId = window.currentUserId;
-    const currentUserName = window.currentUserName;
-    const isAdmin = window.isAdmin;
-    const BASE_URL = window.baseUrl;
-    const CSRF_TOKEN = window.csrfToken;
+// Comments System JavaScript
+class CommentsSystem {
+    constructor() {
+        this.articleId = null;
+        this.comments = [];
+        this.currentPage = 1;
+        this.loading = false;
+        this.init();
+    }
 
-    let isSubmitting = false; // ✅ flag ngăn gửi trùng
-    let isLoadingComments = false; // ✅ flag ngăn load chồng
+    init() {
+        this.articleId = document.querySelector('input[name="article_id"]')?.value;
+        if (!this.articleId) {
+            console.error('Article ID not found');
+            return;
+        }
 
-    // Character counter for main comment form
-    if (commentContent && charCount) {
-        commentContent.addEventListener('input', function() {
-            charCount.textContent = this.value.length;
+        console.log('Initializing comments system for article:', this.articleId);
+        this.bindEvents();
+        this.loadComments();
+        this.setupCharacterCounter();
+    }
+
+    bindEvents() {
+        // Comment form submission
+        const commentForm = document.getElementById('comment-form');
+        if (commentForm) {
+            commentForm.addEventListener('submit', (e) => this.handleCommentSubmit(e));
+        }
+
+        // Reply form submission
+        document.addEventListener('submit', (e) => {
+            if (e.target.classList.contains('reply-comment-form')) {
+                e.preventDefault();
+                this.handleReplySubmit(e);
+            }
         });
-    }
 
-    // Load comments on page load
-    if (articleId) {
-        loadComments();
-    }
+        // Edit form submission
+        document.addEventListener('submit', (e) => {
+            if (e.target.classList.contains('edit-form')) {
+                e.preventDefault();
+                this.handleEditSubmit(e);
+            }
+        });
 
-    // Submit main comment form
-    if (commentForm) {
-        commentForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Report form submission
+        const reportForm = document.getElementById('report-form');
+        if (reportForm) {
+            reportForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
+        }
 
-            if (isSubmitting) return; // ngăn gửi trùng
-            isSubmitting = true;
+        // Like/Dislike buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.like-btn, .dislike-btn')) {
+                e.preventDefault();
+                this.handleLikeDislike(e);
+            }
+        });
 
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
+        // Reply buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.reply-btn')) {
+                e.preventDefault();
+                this.showReplyForm(e);
+            }
+        });
 
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang gửi...';
+        // Edit buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.edit-btn')) {
+                e.preventDefault();
+                this.showEditForm(e);
+            }
+        });
 
-            const formData = new FormData(this);
+        // Delete buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.delete-btn')) {
+                e.preventDefault();
+                this.handleDelete(e);
+            }
+        });
 
-            try {
-                const response = await fetch(`${BASE_URL}/comment/create`, {
-                    method: 'POST',
-                    body: formData
-                });
+        // Report buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.report-btn')) {
+                e.preventDefault();
+                this.showReportModal(e);
+            }
+        });
 
-                const data = await response.json();
-
-                if (data.success) {
-                    commentContent.value = '';
-                    charCount.textContent = '0';
-                    showToast('success', data.message || 'Bình luận đã được thêm thành công');
-
-                    // ✅ Chỉ load 1 lần duy nhất
-                    await loadComments();
-                } else {
-                    showToast('error', data.error || 'Có lỗi xảy ra');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('error', 'Có lỗi xảy ra khi gửi bình luận');
-            } finally {
-                isSubmitting = false;
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
+        // Cancel buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.cancel-reply')) {
+                e.preventDefault();
+                this.hideReplyForm(e);
+            }
+            if (e.target.closest('.cancel-edit')) {
+                e.preventDefault();
+                this.hideEditForm(e);
             }
         });
     }
 
-    // Load comments function
-    async function loadComments() {
-        if (isLoadingComments) return;
-        isLoadingComments = true;
+    setupCharacterCounter() {
+        const textarea = document.getElementById('comment-content');
+        const charCount = document.getElementById('char-count');
+        
+        if (textarea && charCount) {
+            textarea.addEventListener('input', () => {
+                const count = textarea.value.length;
+                charCount.textContent = count;
+                
+                if (count > 900) {
+                    charCount.classList.add('text-warning');
+                } else {
+                    charCount.classList.remove('text-warning');
+                }
+            });
+        }
+    }
+
+    async loadComments() {
+        if (this.loading) return;
+        
+        this.loading = true;
+        this.showLoading();
 
         try {
-            const response = await fetch(`${BASE_URL}/comment/getComments?article_id=${articleId}`);
+            console.log('Loading comments for article:', this.articleId);
+            const response = await fetch(`${BASE_URL}/comments/get?article_id=${this.articleId}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log('Comments loaded:', data);
 
             if (data.success) {
-                renderComments(data.comments);
-                updateCommentCount(data.comments);
+                this.comments = data.comments;
+                this.renderComments();
+                this.updateCommentCount();
             } else {
-                commentsContainer.innerHTML = '<div class="alert alert-warning">Không thể tải bình luận</div>';
+                this.showError('Không thể tải bình luận: ' + (data.error || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error loading comments:', error);
-            commentsContainer.innerHTML = '<div class="alert alert-danger">Có lỗi xảy ra khi tải bình luận</div>';
+            this.showError('Có lỗi xảy ra khi tải bình luận: ' + error.message);
         } finally {
-            isLoadingComments = false;
+            this.loading = false;
         }
     }
 
-    // Render comments
-    function renderComments(comments) {
-        if (!comments || comments.length === 0) {
-            commentsContainer.innerHTML = `
-                <div class="text-center py-5">
-                    <i class="bi bi-chat-text display-1 text-muted"></i>
-                    <h5 class="mt-3 text-muted">Chưa có bình luận nào</h5>
-                    <p class="text-muted">Hãy là người đầu tiên bình luận về bài viết này</p>
-                </div>
-            `;
-            return;
-        }
+    async handleCommentSubmit(e) {
+        e.preventDefault();
         
-        commentsContainer.innerHTML = '';
-        comments.forEach(comment => {
-            const commentElement = createCommentElement(comment);
-            commentsContainer.appendChild(commentElement);
-        });
-    }
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang gửi...';
 
-    // Create comment element
-    function createCommentElement(comment, isReply = false) {
-        const template = document.getElementById('comment-template');
-        const clone = template.content.cloneNode(true);
-        
-        const commentItem = clone.querySelector('.comment-item');
-        commentItem.dataset.commentId = comment.id;
-        
-        // Set avatar
-        const avatarText = clone.querySelector('.avatar-text');
-        avatarText.textContent = getInitials(comment.user_name);
-        
-        // Set author name
-        clone.querySelector('.author-name').textContent = comment.user_name;
-        
-        // Set date
-        clone.querySelector('.comment-date').textContent = formatDate(comment.created_at);
-        
-        // Show edited badge if edited
-        if (comment.is_edited) {
-            clone.querySelector('.comment-edited').style.display = 'inline';
-        }
-        
-        // Set content
-        clone.querySelector('.comment-text').textContent = comment.content;
-        
-        // Set like/dislike counts
-        const likeBtn = clone.querySelector('.like-btn');
-        const dislikeBtn = clone.querySelector('.dislike-btn');
-        const likeCount = clone.querySelector('.like-count');
-        const dislikeCount = clone.querySelector('.dislike-count');
-        
-        likeCount.textContent = comment.like_count || 0;
-        dislikeCount.textContent = comment.dislike_count || 0;
-        
-        // Highlight user's action
-        if (comment.user_action === 'like') {
-            likeBtn.classList.add('active');
-        } else if (comment.user_action === 'dislike') {
-            dislikeBtn.classList.add('active');
-        }
-        
-        // Show/hide action buttons based on permissions
-        if (currentUserId) {
-            if (currentUserId === comment.user_id || isAdmin) {
-                clone.querySelector('.edit-comment-item').style.display = 'block';
-                clone.querySelector('.delete-comment-item').style.display = 'block';
-            }
-        }
-        
-        // Set up event listeners
-        setupCommentEventListeners(commentItem, comment);
-        
-        // Render replies
-        if (comment.replies && comment.replies.length > 0) {
-            const repliesContainer = clone.querySelector('.replies-list');
-            const replyCount = clone.querySelector('.reply-count');
-            const replyCountText = clone.querySelector('.reply-count-text');
-            
-            replyCount.style.display = 'inline';
-            replyCountText.textContent = comment.replies.length;
-            
-            comment.replies.forEach(reply => {
-                const replyElement = createCommentElement(reply, true);
-                repliesContainer.appendChild(replyElement);
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(`${BASE_URL}/comments/create`, {
+                method: 'POST',
+                body: formData
             });
-        }
-        
-        return commentItem;
-    }
 
-    // Setup event listeners for comment
-    function setupCommentEventListeners(element, comment) {
-        // Reply button
-        const replyBtn = element.querySelector('.reply-btn');
-        replyBtn?.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (!currentUserId) {
-                showToast('warning', 'Vui lòng đăng nhập để trả lời');
-                return;
-            }
-            toggleReplyForm(element, comment);
-        });
-        
-        // Edit button
-        const editBtn = element.querySelector('.edit-btn');
-        editBtn?.addEventListener('click', function(e) {
-            e.preventDefault();
-            toggleEditForm(element, comment);
-        });
-        
-        // Delete button
-        const deleteBtn = element.querySelector('.delete-btn');
-        deleteBtn?.addEventListener('click', function(e) {
-            e.preventDefault();
-            deleteComment(comment.id);
-        });
-        
-        // Report button
-        const reportBtn = element.querySelector('.report-btn');
-        reportBtn?.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (!currentUserId) {
-                showToast('warning', 'Vui lòng đăng nhập để báo cáo');
-                return;
-            }
-            showReportModal(comment.id);
-        });
-        
-        // Like/Dislike buttons
-        const likeBtn = element.querySelector('.like-btn');
-        const dislikeBtn = element.querySelector('.dislike-btn');
-        
-        likeBtn?.addEventListener('click', function() {
-            if (!currentUserId) {
-                showToast('warning', 'Vui lòng đăng nhập để thích bình luận');
-                return;
-            }
-            toggleLike(comment.id, 'like', element);
-        });
-        
-        dislikeBtn?.addEventListener('click', function() {
-            if (!currentUserId) {
-                showToast('warning', 'Vui lòng đăng nhập để không thích bình luận');
-                return;
-            }
-            toggleLike(comment.id, 'dislike', element);
-        });
-    }
+            const data = await response.json();
+            console.log('Comment create response:', data);
 
-    // Toggle reply form
-    function toggleReplyForm(element, comment) {
-        const replyFormContainer = element.querySelector('.reply-form-container');
-        const replyForm = element.querySelector('.reply-comment-form');
-        
-        // Hide all other reply forms
-        document.querySelectorAll('.reply-form-container').forEach(form => {
-            if (form !== replyFormContainer) {
-                form.style.display = 'none';
+            if (data.success) {
+                // Clear form
+                form.reset();
+                document.getElementById('char-count').textContent = '0';
+                
+                // Reload comments
+                await this.loadComments();
+                
+                // Show success message
+                this.showSuccess(data.message || 'Bình luận đã được thêm thành công');
+                
+                // Scroll to comments section
+                setTimeout(() => {
+                    document.getElementById('comments-container').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 100);
+            } else {
+                this.showError(data.error || 'Không thể tạo bình luận');
             }
-        });
-        
-        // Toggle current form
-        if (replyFormContainer.style.display === 'none' || !replyFormContainer.style.display) {
-            replyFormContainer.style.display = 'block';
-            replyForm.querySelector('input[name="parent_id"]').value = comment.id;
-            replyForm.querySelector('.reply-to-author').textContent = comment.user_name;
-            
-            // Setup cancel button
-            const cancelBtn = replyForm.querySelector('.cancel-reply');
-            cancelBtn.addEventListener('click', function() {
-                replyFormContainer.style.display = 'none';
-                replyForm.reset();
-            });
-            
-            // Setup submit
-            replyForm.onsubmit = async function(e) {
-                e.preventDefault();
-                await submitReply(this, element);
-            };
-        } else {
-            replyFormContainer.style.display = 'none';
-            replyForm.reset();
+        } catch (error) {
+            console.error('Error submitting comment:', error);
+            this.showError('Có lỗi xảy ra khi gửi bình luận');
+        } finally {
+            // Restore button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
         }
     }
 
-    // Submit reply
-    async function submitReply(form, parentElement) {
+    async handleReplySubmit(e) {
+        const form = e.target;
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        
-        const formData = new FormData(form);
-        
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang gửi...';
+
         try {
-            const response = await fetch(`${BASE_URL}/comment/create`, {
+            const formData = new FormData(form);
+            const response = await fetch(`${BASE_URL}/comments/create`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
-                showToast('success', 'Trả lời đã được thêm');
+                // Reset form
                 form.reset();
-                parentElement.querySelector('.reply-form-container').style.display = 'none';
-                await loadComments();
+                
+                // Hide reply form
+                const replyContainer = form.closest('.reply-form-container');
+                if (replyContainer) {
+                    replyContainer.style.display = 'none';
+                }
+                
+                // Reload comments
+                await this.loadComments();
+                
+                this.showSuccess(data.message || 'Trả lời đã được thêm thành công');
             } else {
-                showToast('error', data.error);
+                this.showError(data.error || 'Không thể gửi trả lời');
             }
         } catch (error) {
-            console.error('Error:', error);
-            showToast('error', 'Có lỗi xảy ra');
+            console.error('Error submitting reply:', error);
+            this.showError('Có lỗi xảy ra khi gửi trả lời');
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }
     }
 
-    // Toggle edit form
-    function toggleEditForm(element, comment) {
-        const commentText = element.querySelector('.comment-text');
-        const editForm = element.querySelector('.comment-edit-form');
-        const textarea = editForm.querySelector('textarea[name="content"]');
-        const charCounter = editForm.querySelector('.edit-char-count');
-        
-        if (editForm.style.display === 'none' || !editForm.style.display) {
-            commentText.style.display = 'none';
-            editForm.style.display = 'block';
-            textarea.value = comment.content;
-            charCounter.textContent = comment.content.length;
-            
-            // Character counter
-            textarea.addEventListener('input', function() {
-                charCounter.textContent = this.value.length;
-            });
-            
-            // Set comment ID
-            editForm.querySelector('input[name="comment_id"]').value = comment.id;
-            
-            // Cancel button
-            const cancelBtn = editForm.querySelector('.cancel-edit');
-            cancelBtn.addEventListener('click', function() {
-                commentText.style.display = 'block';
-                editForm.style.display = 'none';
-            });
-            
-            // Submit edit
-            const form = editForm.querySelector('.edit-form');
-            form.onsubmit = async function(e) {
-                e.preventDefault();
-                await submitEdit(this, element);
-            };
-        } else {
-            commentText.style.display = 'block';
-            editForm.style.display = 'none';
-        }
-    }
-
-    // Submit edit
-    async function submitEdit(form, element) {
+    async handleEditSubmit(e) {
+        const form = e.target;
         const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
         submitBtn.disabled = true;
-        
-        const formData = new FormData(form);
-        
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang lưu...';
+
         try {
-            const response = await fetch(`${BASE_URL}/comment/update`, {
+            const formData = new FormData(form);
+            const response = await fetch(`${BASE_URL}/comments/update`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
-                showToast('success', data.message);
-                await loadComments();
+                // Hide edit form
+                const editForm = form.closest('.comment-edit-form');
+                const commentText = form.closest('.comment-content').querySelector('.comment-text');
+                
+                if (editForm && commentText) {
+                    editForm.style.display = 'none';
+                    commentText.style.display = 'block';
+                }
+                
+                // Reload comments
+                await this.loadComments();
+                
+                this.showSuccess(data.message || 'Bình luận đã được cập nhật');
             } else {
-                showToast('error', data.error);
+                this.showError(data.error || 'Không thể cập nhật bình luận');
             }
         } catch (error) {
-            console.error('Error:', error);
-            showToast('error', 'Có lỗi xảy ra');
+            console.error('Error updating comment:', error);
+            this.showError('Có lỗi xảy ra khi cập nhật bình luận');
         } finally {
             submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
         }
     }
 
-    // Delete comment
-    async function deleteComment(commentId) {
-        if (!confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+    async handleDelete(e) {
+        const commentItem = e.target.closest('.comment-item');
+        const commentId = commentItem.dataset.commentId;
+        
+        if (!confirm('Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.')) {
             return;
         }
-        
-        const formData = new FormData();
-        formData.append('csrf', CSRF_TOKEN);
-        formData.append('comment_id', commentId);
-        
+
         try {
-            const response = await fetch(`${BASE_URL}/comment/delete`, {
+            const formData = new FormData();
+            formData.append('csrf', document.querySelector('input[name="csrf"]').value);
+            formData.append('comment_id', commentId);
+
+            const response = await fetch(`${BASE_URL}/comments/delete`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
-                showToast('success', data.message);
-                await loadComments();
+                // Reload comments to update UI
+                await this.loadComments();
+                
+                this.showSuccess(data.message || 'Bình luận đã được xóa');
             } else {
-                showToast('error', data.error);
+                this.showError(data.error || 'Không thể xóa bình luận');
             }
         } catch (error) {
-            console.error('Error:', error);
-            showToast('error', 'Có lỗi xảy ra');
+            console.error('Error deleting comment:', error);
+            this.showError('Có lỗi xảy ra khi xóa bình luận');
         }
     }
 
-    // Toggle like/dislike
-// Toggle like/dislike (mạnh hơn, xử lý lỗi rõ ràng)
-async function toggleLike(commentId, action, element) {
-    const likeBtn = element.querySelector('.like-btn');
-    const dislikeBtn = element.querySelector('.dislike-btn');
-    const likeCountEl = element.querySelector('.like-count');
-    const dislikeCountEl = element.querySelector('.dislike-count');
+    async handleLikeDislike(e) {
+        const btn = e.target.closest('.like-btn, .dislike-btn');
+        const action = btn.dataset.action;
+        const commentItem = btn.closest('.comment-item');
+        const commentId = commentItem.dataset.commentId;
 
-    // tránh double click
-    if (likeBtn) likeBtn.disabled = true;
-    if (dislikeBtn) dislikeBtn.disabled = true;
+        try {
+            const formData = new FormData();
+            formData.append('csrf', document.querySelector('input[name="csrf"]').value);
+            formData.append('comment_id', commentId);
+            formData.append('action', action);
 
-    // Prepare payload (FormData đảm bảo gửi csrf)
-    const formData = new FormData();
-    // ưu tiên lấy csrf từ hidden input trong DOM nếu có (mới nhất)
-    const localCsrf = element.querySelector('input[name="csrf"]')?.value || CSRF_TOKEN || '';
-    formData.append('csrf', localCsrf);
-    formData.append('comment_id', commentId);
-    formData.append('action', action);
+            const response = await fetch(`${BASE_URL}/comments/toggle-like`, {
+                method: 'POST',
+                body: formData
+            });
 
-    try {
-        const resp = await fetch(`${BASE_URL}/comment/toggleLike`, {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json'
+            const data = await response.json();
+
+            if (data.success) {
+                // Update like/dislike counts
+                const likeBtn = commentItem.querySelector('.like-btn');
+                const dislikeBtn = commentItem.querySelector('.dislike-btn');
+                const likeCount = commentItem.querySelector('.like-count');
+                const dislikeCount = commentItem.querySelector('.dislike-count');
+
+                likeCount.textContent = data.likes;
+                dislikeCount.textContent = data.dislikes;
+
+                // Update button states
+                likeBtn.classList.remove('active');
+                dislikeBtn.classList.remove('active');
+
+                if (data.action === 'like') {
+                    likeBtn.classList.add('active');
+                } else if (data.action === 'dislike') {
+                    dislikeBtn.classList.add('active');
+                }
+            } else {
+                this.showError(data.error || 'Có lỗi xảy ra');
+            }
+        } catch (error) {
+            console.error('Error toggling like:', error);
+            this.showError('Có lỗi xảy ra');
+        }
+    }
+
+    async handleReportSubmit(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang gửi...';
+
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(`${BASE_URL}/comments/report`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Reset form
+                form.reset();
+                
+                this.showSuccess(data.message || 'Báo cáo đã được gửi thành công');
+            } else {
+                this.showError(data.error || 'Không thể gửi báo cáo');
+            }
+        } catch (error) {
+            console.error('Error reporting comment:', error);
+            this.showError('Có lỗi xảy ra khi gửi báo cáo');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    }
+
+    showReplyForm(e) {
+        const commentItem = e.target.closest('.comment-item');
+        const replyContainer = commentItem.querySelector(':scope > .comment-card > .reply-form-container');
+        const authorName = commentItem.querySelector('.author-name').textContent;
+        
+        // Hide other reply forms
+        document.querySelectorAll('.reply-form-container').forEach(container => {
+            if (container !== replyContainer) {
+                container.style.display = 'none';
             }
         });
-
-        // Nếu server trả không phải JSON hoặc status lỗi -> đọc as text để debug
-        const text = await resp.text();
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error('toggleLike: non-json response:', text);
-            showToast('error', 'Lỗi máy chủ: phản hồi không hợp lệ');
-            return;
-        }
-
-        if (!resp.ok || !data.success) {
-            console.warn('toggleLike error response:', data);
-            showToast('error', data.error || 'Có lỗi xảy ra khi xử lý yêu cầu');
-            return;
-        }
-
-        // Thành công -> cập nhật giao diện
-        if (likeCountEl) likeCountEl.textContent = data.likes ?? 0;
-        if (dislikeCountEl) dislikeCountEl.textContent = data.dislikes ?? 0;
-
-        likeBtn?.classList.toggle('active', data.action === 'like');
-        dislikeBtn?.classList.toggle('active', data.action === 'dislike');
-
-    } catch (err) {
-        console.error('toggleLike fetch error:', err);
-        showToast('error', 'Không thể kết nối tới máy chủ');
-    } finally {
-        if (likeBtn) likeBtn.disabled = false;
-        if (dislikeBtn) dislikeBtn.disabled = false;
-    }
-}
-
-
-    // Show report modal
-    function showReportModal(commentId) {
-        const reportForm = document.getElementById('report-form');
-        reportForm.querySelector('input[name="comment_id"]').value = commentId;
-        reportForm.reset();
         
-        reportForm.onsubmit = async function(e) {
-            e.preventDefault();
-            await submitReport(this);
+        // Show this reply form
+        if (replyContainer) {
+            replyContainer.style.display = 'block';
+            replyContainer.querySelector('.reply-to-author').textContent = authorName;
+            replyContainer.querySelector('input[name="parent_id"]').value = commentItem.dataset.commentId;
+            
+            // Focus on textarea
+            const textarea = replyContainer.querySelector('textarea');
+            textarea.focus();
+        }
+    }
+
+    hideReplyForm(e) {
+        const replyContainer = e.target.closest('.reply-form-container');
+        if (replyContainer) {
+            replyContainer.style.display = 'none';
+            const form = replyContainer.querySelector('form');
+            if (form) form.reset();
+        }
+    }
+
+    showEditForm(e) {
+        const commentItem = e.target.closest('.comment-item');
+        const commentContent = commentItem.querySelector(':scope > .comment-card > .comment-content');
+        const commentText = commentContent.querySelector('.comment-text');
+        const editForm = commentContent.querySelector('.comment-edit-form');
+        const textarea = editForm.querySelector('textarea');
+        
+        // Hide other edit forms
+        document.querySelectorAll('.comment-edit-form').forEach(form => {
+            if (form !== editForm) {
+                form.style.display = 'none';
+                const sibling = form.previousElementSibling;
+                if (sibling && sibling.classList.contains('comment-text')) {
+                    sibling.style.display = 'block';
+                }
+            }
+        });
+        
+        // Show this edit form
+        editForm.style.display = 'block';
+        commentText.style.display = 'none';
+        
+        // Set content
+        textarea.value = commentText.textContent.trim();
+        editForm.querySelector('input[name="comment_id"]').value = commentItem.dataset.commentId;
+        
+        // Setup character counter
+        const charCount = editForm.querySelector('.edit-char-count');
+        const updateCounter = () => {
+            charCount.textContent = textarea.value.length;
         };
+        textarea.addEventListener('input', updateCounter);
+        updateCounter();
         
-        reportModal.show();
+        textarea.focus();
     }
 
-    // Submit report
-    async function submitReport(form) {
-        const formData = new FormData(form);
-        // ensure csrf exists
-        if (!formData.get('csrf')) formData.append('csrf', CSRF_TOKEN);
-    
-        try {
-            const resp = await fetch(`${BASE_URL}/comment/report`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin',
-                headers: { 'Accept': 'application/json' }
-            });
-    
-            const text = await resp.text();
-            let data;
-            try { data = JSON.parse(text); } catch (e) {
-                console.error('submitReport non-json:', text);
-                showToast('error', 'Lỗi máy chủ (phản hồi không hợp lệ)');
-                return;
-            }
-    
-            if (!resp.ok || !data.success) {
-                showToast('error', data.error || 'Không thể gửi báo cáo');
-                return;
-            }
-    
-            showToast('success', data.message || 'Báo cáo đã được gửi');
-            reportModal.hide();
-            form.reset();
-        } catch (err) {
-            console.error('submitReport error:', err);
-            showToast('error', 'Không thể kết nối tới máy chủ');
+    hideEditForm(e) {
+        const editForm = e.target.closest('.comment-edit-form');
+        const commentContent = editForm.closest('.comment-content');
+        const commentText = commentContent.querySelector('.comment-text');
+        
+        if (editForm && commentText) {
+            editForm.style.display = 'none';
+            commentText.style.display = 'block';
+            const form = editForm.querySelector('form');
+            if (form) form.reset();
         }
     }
-    
 
-    // Helper functions
-    function getInitials(name) {
-        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    showReportModal(e) {
+        const commentItem = e.target.closest('.comment-item');
+        const commentId = commentItem.dataset.commentId;
+        
+        const modalElement = document.getElementById('reportModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            document.querySelector('#report-form input[name="comment_id"]').value = commentId;
+            modal.show();
+        }
     }
 
-    function formatDate(dateString) {
+    renderComments() {
+        const container = document.getElementById('comments-container');
+        const template = document.getElementById('comment-template');
+        
+        if (!container || !template) {
+            console.error('Comments container or template not found');
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        if (this.comments.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="empty-state">
+                        <i class="bi bi-chat-dots display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted">Chưa có bình luận nào</h4>
+                        <p class="text-muted">Hãy là người đầu tiên chia sẻ suy nghĩ về bài viết này!</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        this.comments.forEach(comment => {
+            const commentElement = this.createCommentElement(comment, template);
+            container.appendChild(commentElement);
+        });
+    }
+
+    createCommentElement(comment, template) {
+        const clone = template.content.cloneNode(true);
+        const commentItem = clone.querySelector('.comment-item');
+        
+        // Set comment data
+        commentItem.dataset.commentId = comment.id;
+        
+        // Set author info
+        const avatarText = clone.querySelector('.avatar-text');
+        const authorName = clone.querySelector('.author-name');
+        const commentDate = clone.querySelector('.comment-date');
+        
+        avatarText.textContent = comment.user_name ? comment.user_name.charAt(0).toUpperCase() : '?';
+        authorName.textContent = comment.user_name || 'Anonymous';
+        commentDate.textContent = this.formatDate(comment.created_at);
+        
+        // Set comment content
+        const commentText = clone.querySelector('.comment-text');
+        commentText.textContent = comment.content;
+        
+        // Set like/dislike counts
+        const likeCount = clone.querySelector('.like-count');
+        const dislikeCount = clone.querySelector('.dislike-count');
+        const likeBtn = clone.querySelector('.like-btn');
+        const dislikeBtn = clone.querySelector('.dislike-btn');
+        
+        likeCount.textContent = comment.like_count || 0;
+        dislikeCount.textContent = comment.dislike_count || 0;
+        
+        if (comment.user_action === 'like') {
+            likeBtn.classList.add('active');
+        } else if (comment.user_action === 'dislike') {
+            dislikeBtn.classList.add('active');
+        }
+        
+        // Show edit/delete buttons for comment owner or admin
+        const currentUserId = window.currentUser?.id;
+        const isAdmin = window.currentUser?.role_id === 1;
+        
+        if (currentUserId && (comment.user_id == currentUserId || isAdmin)) {
+            clone.querySelector('.edit-comment-item').style.display = 'block';
+            clone.querySelector('.delete-comment-item').style.display = 'block';
+        }
+        
+        // Show edited indicator
+        if (comment.is_edited) {
+            clone.querySelector('.comment-edited').style.display = 'inline';
+        }
+        
+        // Set reply count
+        const replyCount = comment.replies?.length || 0;
+        if (replyCount > 0) {
+            const replyCountElement = clone.querySelector('.reply-count');
+            replyCountElement.style.display = 'inline';
+            replyCountElement.querySelector('.reply-count-text').textContent = replyCount;
+            
+            // Render replies
+            const repliesContainer = clone.querySelector('.replies-list');
+            comment.replies.forEach(reply => {
+                const replyElement = this.createCommentElement(reply, template);
+                repliesContainer.appendChild(replyElement);
+            });
+        }
+        
+        return clone;
+    }
+
+    updateCommentCount() {
+        const countElement = document.getElementById('comment-count');
+        if (countElement) {
+            const totalComments = this.countTotalComments(this.comments);
+            countElement.textContent = totalComments;
+        }
+    }
+
+    countTotalComments(comments) {
+        let count = comments.length;
+        comments.forEach(comment => {
+            if (comment.replies) {
+                count += this.countTotalComments(comment.replies);
+            }
+        });
+        return count;
+    }
+
+    formatDate(dateString) {
         const date = new Date(dateString);
         const now = new Date();
         const diff = now - date;
@@ -554,40 +638,53 @@ async function toggleLike(commentId, action, element) {
         if (hours < 24) return `${hours} giờ trước`;
         if (days < 7) return `${days} ngày trước`;
         
-        return date.toLocaleDateString('vi-VN');
+        return date.toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
     }
 
-    function updateCommentCount(comments) {
-        let count = 0;
-        
-        function countComments(commentList) {
-            commentList.forEach(comment => {
-                count++;
-                if (comment.replies && comment.replies.length > 0) {
-                    countComments(comment.replies);
-                }
-            });
-        }
-        
-        countComments(comments);
-        commentCountEl.textContent = count;
-    }
-
-    function showToast(type, message) {
-        // Create toast element
-        const toastHtml = `
-            <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'warning'} border-0" role="alert">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'exclamation-triangle'} me-2"></i>
-                        ${message}
+    showLoading() {
+        const container = document.getElementById('comments-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
                     </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    <p class="mt-2 text-muted">Đang tải bình luận...</p>
                 </div>
+            `;
+        }
+    }
+
+    showSuccess(message) {
+        this.showToast(message, 'success');
+    }
+
+    showError(message) {
+        this.showToast(message, 'danger');
+    }
+
+    showToast(message, type = 'info') {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         `;
         
-        // Get or create toast container
+        // Add to page
         let toastContainer = document.querySelector('.toast-container');
         if (!toastContainer) {
             toastContainer = document.createElement('div');
@@ -596,15 +693,24 @@ async function toggleLike(commentId, action, element) {
             document.body.appendChild(toastContainer);
         }
         
-        // Add toast
-        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-        const toastElement = toastContainer.lastElementChild;
-        const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
-        toast.show();
+        toastContainer.appendChild(toast);
         
-        // Remove toast after hidden
-        toastElement.addEventListener('hidden.bs.toast', function() {
-            toastElement.remove();
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 3000
+        });
+        bsToast.show();
+        
+        // Remove from DOM after hiding
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
         });
     }
+}
+
+// Initialize comments system when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing Comments System...');
+    new CommentsSystem();
 });

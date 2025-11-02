@@ -3,7 +3,8 @@
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="<?= BASE_URL ?>/admin">Admin</a></li>
       <li class="breadcrumb-item"><a href="<?= BASE_URL ?>/admin/users">Người dùng</a></li>
-      <li class="breadcrumb-item active">Tạo mới</li>
+      <li class="breadcrumb-item"><a href="<?= BASE_URL ?>/admin/users/<?= $user['id'] ?>"><?= htmlspecialchars($user['name']) ?></a></li>
+      <li class="breadcrumb-item active">Chỉnh sửa</li>
     </ol>
   </nav>
 </div>
@@ -13,7 +14,7 @@
     <div class="card">
       <div class="card-header">
         <h4 class="mb-0">
-          <i class="bi bi-person-plus me-2"></i>
+          <i class="bi bi-pencil-square me-2"></i>
           <?= htmlspecialchars($title) ?>
         </h4>
       </div>
@@ -25,8 +26,8 @@
               'missing_fields' => 'Vui lòng điền đầy đủ thông tin',
               'invalid_email' => 'Email không hợp lệ',
               'password_short' => 'Mật khẩu phải có ít nhất 6 ký tự',
-              'email_exists' => 'Email này đã được sử dụng',
-              'create_failed' => 'Không thể tạo người dùng. Vui lòng thử lại'
+              'email_exists' => 'Email này đã được sử dụng bởi người dùng khác',
+              'update_failed' => 'Không thể cập nhật người dùng. Vui lòng thử lại'
             ];
             echo $errors[$_GET['error']] ?? 'Có lỗi xảy ra';
           ?>
@@ -34,7 +35,7 @@
         </div>
         <?php endif; ?>
 
-        <form method="POST" action="<?= BASE_URL ?>/admin/users/create">
+        <form method="POST" action="<?= BASE_URL ?>/admin/users/<?= $user['id'] ?>/update">
           <input type="hidden" name="csrf" value="<?= $csrf ?>">
           
           <div class="mb-3">
@@ -47,6 +48,7 @@
                    name="name" 
                    required 
                    maxlength="100"
+                   value="<?= htmlspecialchars($user['name']) ?>"
                    placeholder="Nhập tên đầy đủ">
           </div>
 
@@ -60,34 +62,33 @@
                    name="email" 
                    required 
                    maxlength="100"
+                   value="<?= htmlspecialchars($user['email']) ?>"
                    placeholder="Nhập địa chỉ email">
             <div class="form-text">Email sẽ được sử dụng để đăng nhập</div>
           </div>
 
           <div class="mb-3">
             <label for="password" class="form-label">
-              Mật khẩu <span class="text-danger">*</span>
+              Mật khẩu mới
             </label>
             <input type="password" 
                    class="form-control" 
                    id="password" 
                    name="password" 
-                   required 
                    minlength="6"
-                   placeholder="Nhập mật khẩu">
-            <div class="form-text">Mật khẩu phải có ít nhất 6 ký tự</div>
+                   placeholder="Để trống nếu không muốn thay đổi">
+            <div class="form-text">Chỉ nhập nếu muốn thay đổi mật khẩu (tối thiểu 6 ký tự)</div>
           </div>
 
           <div class="mb-3">
             <label for="password_confirm" class="form-label">
-              Xác nhận mật khẩu <span class="text-danger">*</span>
+              Xác nhận mật khẩu mới
             </label>
             <input type="password" 
                    class="form-control" 
                    id="password_confirm" 
-                   required 
                    minlength="6"
-                   placeholder="Nhập lại mật khẩu">
+                   placeholder="Nhập lại mật khẩu mới">
             <div id="password-match-message" class="form-text"></div>
           </div>
 
@@ -96,9 +97,9 @@
               Vai trò <span class="text-danger">*</span>
             </label>
             <select class="form-select" id="role_id" name="role_id" required>
-              <option value="1">User - Người dùng thông thường</option>
-              <option value="2">Editor - Biên tập viên</option>
-              <option value="3">Admin - Quản trị viên</option>
+              <option value="1" <?= $user['role_id'] == 1 ? 'selected' : '' ?>>User - Người dùng thông thường</option>
+              <option value="2" <?= $user['role_id'] == 2 ? 'selected' : '' ?>>Editor - Biên tập viên</option>
+              <option value="3" <?= $user['role_id'] == 3 ? 'selected' : '' ?>>Admin - Quản trị viên</option>
             </select>
             <div class="form-text">
               <ul class="mb-0 mt-2">
@@ -109,12 +110,17 @@
             </div>
           </div>
 
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Lưu ý:</strong> Nếu bạn thay đổi vai trò hoặc mật khẩu của người dùng, họ có thể cần đăng nhập lại.
+          </div>
+
           <div class="d-flex justify-content-between">
-            <a href="<?= BASE_URL ?>/admin/users" class="btn btn-secondary">
+            <a href="<?= BASE_URL ?>/admin/users/<?= $user['id'] ?>" class="btn btn-secondary">
               <i class="bi bi-arrow-left me-2"></i>Quay lại
             </a>
             <button type="submit" class="btn btn-primary" id="submit-btn">
-              <i class="bi bi-check-circle me-2"></i>Tạo người dùng
+              <i class="bi bi-check-circle me-2"></i>Cập nhật
             </button>
           </div>
         </form>
@@ -131,12 +137,23 @@ const submitBtn = document.getElementById('submit-btn');
 const matchMessage = document.getElementById('password-match-message');
 
 function checkPasswordMatch() {
-  if (passwordConfirm.value === '') {
+  // If both fields are empty, it's ok
+  if (password.value === '' && passwordConfirm.value === '') {
     matchMessage.textContent = '';
     matchMessage.className = 'form-text';
+    submitBtn.disabled = false;
     return;
   }
   
+  // If password is entered but confirm is empty
+  if (password.value !== '' && passwordConfirm.value === '') {
+    matchMessage.textContent = 'Vui lòng xác nhận mật khẩu mới';
+    matchMessage.className = 'form-text text-warning';
+    submitBtn.disabled = true;
+    return;
+  }
+  
+  // Check if passwords match
   if (password.value === passwordConfirm.value) {
     matchMessage.textContent = '✓ Mật khẩu khớp';
     matchMessage.className = 'form-text text-success';
@@ -153,16 +170,19 @@ passwordConfirm.addEventListener('input', checkPasswordMatch);
 
 // Form validation
 document.querySelector('form').addEventListener('submit', function(e) {
-  if (password.value !== passwordConfirm.value) {
-    e.preventDefault();
-    alert('Mật khẩu xác nhận không khớp!');
-    return false;
-  }
-  
-  if (password.value.length < 6) {
-    e.preventDefault();
-    alert('Mật khẩu phải có ít nhất 6 ký tự!');
-    return false;
+  // If password is being changed
+  if (password.value !== '') {
+    if (password.value !== passwordConfirm.value) {
+      e.preventDefault();
+      alert('Mật khẩu xác nhận không khớp!');
+      return false;
+    }
+    
+    if (password.value.length < 6) {
+      e.preventDefault();
+      alert('Mật khẩu phải có ít nhất 6 ký tự!');
+      return false;
+    }
   }
 });
 </script>
