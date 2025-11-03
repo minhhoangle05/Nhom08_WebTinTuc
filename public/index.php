@@ -136,11 +136,15 @@ $router->post('/admin/tags/:id/update', 'AdminController@updateTag');
 $router->post('/admin/tags/:id/delete', 'AdminController@deleteTag');
 
 // Admin - Comments Management
+// Trang quản lý comment (UI)
 $router->get('/admin/comments', 'AdminController@comments');
-$router->post('/admin/comments/:id/delete', 'AdminController@deleteComment');
+// API endpoints cho comment moderation
 $router->get('/admin/comments/moderation', 'AdminController@commentsModeration');
 $router->get('/admin/comments/reports', 'AdminController@commentsReports');
 $router->post('/admin/comments/resolve-report', 'AdminController@resolveReport');
+$router->post('/admin/comments/:id/delete', 'AdminController@deleteComment');
+
+
 
 // Admin - Statistics
 $router->get('/admin/statistics', 'AdminController@statistics');

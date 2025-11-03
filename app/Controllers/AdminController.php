@@ -590,15 +590,67 @@ class AdminController extends Controller
     /**
      * Trang quản lý bình luận (UI)
      */
-    public function commentsModerationPage(): void
+    // Thêm vào AdminController.php trong phần COMMENTS MANAGEMENT
+
+public function comments(): void
     {
         if (!$this->checkAdminAccess()) return;
 
-        $this->view('admin/comments', [
-            'title' => 'Quản lý bình luận'
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $limit = 20;
+        $offset = ($page - 1) * $limit;
+
+        $commentModel = new Admin();
+        $comments = $commentModel->getComments($limit, $offset); // Cần có method này
+        $total = $commentModel->countComments(); // Cần có method này
+        $totalPages = ceil($total / $limit);
+
+        $this->view('admin/comments/index', [
+            'title' => 'Quản lý bình luận',
+            'comments' => $comments,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'total' => $total,
+            'csrf' => CSRF::token()
         ]);
     }
+    /**
+ * Xóa bình luận (Admin)
+ */
+public function deleteComment(string $id): void
+{
+    if (!$this->checkAdminAccess()) return;
 
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo 'Method not allowed';
+        return;
+    }
+
+    if (!CSRF::validate($_POST['csrf'] ?? null)) {
+        http_response_code(400);
+        echo 'Invalid CSRF token';
+        return;
+    }
+
+    $commentId = (int)$id;
+    $commentModel = new Comment();
+    $comment = $commentModel->findById($commentId);
+    
+    if (!$comment) {
+        http_response_code(404);
+        echo 'Bình luận không tồn tại';
+        return;
+    }
+
+    if ($commentModel->delete($commentId)) {
+        ActivityLogger::log('comment_delete', $commentId);
+        header('Location: ' . BASE_URL . '/admin/comments?success=deleted');
+    } else {
+        http_response_code(500);
+        echo 'Không thể xóa bình luận';
+    }
+}
     /**
      * API: Lấy danh sách bình luận cần kiểm duyệt
      */
@@ -704,4 +756,112 @@ class AdminController extends Controller
             ]);
         }
     }
+    // ========== STATISTICS ==========
+
+/**
+ * Trang thống kê lượt xem chi tiết
+ */
+public function viewStatistics(): void
+{
+    if (!$this->checkAdminAccess()) return;
+
+    // Lấy filters từ query string
+    $days = (int)($_GET['days'] ?? 7);
+    $filters = [
+        'article_id' => $_GET['article_id'] ?? null,
+        'user_id' => $_GET['user_id'] ?? null,
+        'date_from' => $_GET['date_from'] ?? null,
+        'date_to' => $_GET['date_to'] ?? null,
+        'sort' => $_GET['sort'] ?? 'views'
+    ];
+
+    // Lấy danh sách bài viết cho filter dropdown
+    $articleModel = new Article();
+    $articles = $articleModel->search(['status' => 'published'], 1000, 0);
+
+    // Lấy danh sách tác giả
+    $users = $this->adminModel->getAllAuthors();
+
+    // Lấy thống kê lượt xem
+    $viewStats = $this->adminModel->getDetailedViewStatistics($days, $filters);
+
+    $this->view('admin/statistics/views', [
+        'title' => 'Thống kê lượt xem chi tiết',
+        'viewStats' => $viewStats,
+        'articles' => $articles,
+        'users' => $users,
+        'days' => $days,
+        'filters' => $filters
+    ]);
+}
+
+/**
+ * API: Thống kê bài viết
+ */
+public function articleStatistics(): void
+{
+    if (!$this->checkAdminAccess()) return;
+
+    header('Content-Type: application/json');
+
+    try {
+        $period = $_GET['period'] ?? '30'; // 7, 30, 90 days
+        $stats = $this->adminModel->getArticleStatistics((int)$period);
+
+        echo json_encode([
+            'success' => true,
+            'data' => $stats
+        ]);
+    } catch (\Exception $e) {
+        error_log("Error in articleStatistics: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Có lỗi xảy ra khi tải thống kê'
+        ]);
+    }
+}
+
+/**
+ * API: Thống kê người dùng
+ */
+public function userStatistics(): void
+{
+    if (!$this->checkAdminAccess()) return;
+
+    header('Content-Type: application/json');
+
+    try {
+        $period = $_GET['period'] ?? '30'; // 7, 30, 90 days
+        $stats = $this->adminModel->getUserStatistics((int)$period);
+
+        echo json_encode([
+            'success' => true,
+            'data' => $stats
+        ]);
+    } catch (\Exception $e) {
+        error_log("Error in userStatistics: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Có lỗi xảy ra khi tải thống kê'
+        ]);
+    }
+}
+
+/**
+ * Trang tổng quan thống kê (nếu cần)
+ */
+public function statistics(): void
+{
+    if (!$this->checkAdminAccess()) return;
+
+    $this->view('admin/statistics/index', [
+        'title' => 'Thống kê tổng quan',
+        'stats' => $this->adminModel->getDashboardStats(),
+        'viewStats' => $this->adminModel->getViewStatistics(30),
+        'categoryStats' => $this->adminModel->getCategoryStatistics(),
+        'popularArticles' => $this->adminModel->getPopularArticles(10)
+    ]);
+}
 }

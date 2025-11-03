@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($article['title']) ?></title>
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="<?= BASE_URL ?>/css/style.css" rel="stylesheet">
+    
     <style>
         .article-header {
             border-bottom: 1px solid #eee;
@@ -28,6 +29,10 @@
             font-size: 1.2rem;
             color: #666;
             margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 0.5rem;
         }
         .social-share {
             position: sticky;
@@ -43,9 +48,18 @@
         .share-btn:hover {
             transform: translateX(5px);
         }
+        .related-articles .card {
+            transition: transform 0.3s ease;
+        }
+        .related-articles .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
+    <!-- Navigation (include your header here) -->
+    <?php include APP_PATH . '/views/layouts/header.php'; ?>
 
     <article class="container my-5">
         <div class="row">
@@ -53,20 +67,36 @@
                 <header class="article-header">
                     <h1 class="mb-3"><?= htmlspecialchars($article['title']) ?></h1>
                     
-                    <div class="article-meta">
-                        <span class="me-3">Tác giả: <?= htmlspecialchars($article['author_name'] ?? 'Unknown') ?></span>
+                    <div class="article-meta d-flex flex-wrap align-items-center gap-3">
+                        <span>
+                            <i class="bi bi-person-circle me-1"></i>
+                            <?= htmlspecialchars($article['author_name'] ?? 'Unknown') ?>
+                        </span>
                         
                         <?php if ($article['category_name']): ?>
-                        <span class="me-3">
-                            Danh mục: <a href="<?= BASE_URL ?>/articles?category=<?= urlencode($article['category_slug']) ?>" class="text-decoration-none">
+                        <span>
+                            <i class="bi bi-folder me-1"></i>
+                            <a href="<?= BASE_URL ?>/articles?category=<?= urlencode($article['category_slug']) ?>" 
+                               class="text-decoration-none">
                                 <?= htmlspecialchars($article['category_name']) ?>
                             </a>
                         </span>
                         <?php endif; ?>
                         
-                        <span class="me-3">Ngày đăng: <?= date('d/m/Y H:i', strtotime($article['created_at'])) ?></span>
+                        <span>
+                            <i class="bi bi-calendar3 me-1"></i>
+                            <?= date('d/m/Y H:i', strtotime($article['created_at'])) ?>
+                        </span>
                         
-                        <span>Lượt xem: <?= number_format($article['views'] ?? 0) ?></span>
+                        <span>
+                            <i class="bi bi-eye me-1"></i>
+                            <?= number_format($article['views'] ?? 0) ?>
+                        </span>
+                        
+                        <span>
+                            <i class="bi bi-chat-dots me-1"></i>
+                            <?= number_format($article['comment_count'] ?? 0) ?>
+                        </span>
                     </div>
                 </header>
 
@@ -80,7 +110,7 @@
                 <div class="text-center mb-4">
                     <img src="<?= BASE_URL ?>/uploads/articles/<?= htmlspecialchars($article['featured_image']) ?>"
                          alt="<?= htmlspecialchars($article['title']) ?>"
-                         class="img-fluid rounded">
+                         class="img-fluid rounded shadow">
                 </div>
                 <?php endif; ?>
 
@@ -90,33 +120,35 @@
 
                 <?php if (!empty($tags)): ?>
                 <div class="mt-4 mb-4">
-                    <h5>Tags:</h5>
-                    <?php foreach ($tags as $tag): ?>
-                        <a href="<?= BASE_URL ?>/articles?tag=<?= urlencode($tag['name']) ?>" 
-                           class="btn btn-sm btn-outline-secondary me-2 mb-2">
-                            <?= htmlspecialchars($tag['name']) ?>
-                        </a>
-                    <?php endforeach; ?>
+                    <h5><i class="bi bi-tags me-2"></i>Tags:</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        <?php foreach ($tags as $tag): ?>
+                            <a href="<?= BASE_URL ?>/articles?tag=<?= urlencode($tag['name']) ?>" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-tag me-1"></i><?= htmlspecialchars($tag['name']) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
                 <?php endif; ?>
 
                 <!-- Social Share -->
-                <div class="mt-4 mb-4">
-                    <h5>Chia sẻ:</h5>
-                    <div class="d-flex gap-2">
+                <div class="mt-4 mb-4 p-3 bg-light rounded">
+                    <h5 class="mb-3"><i class="bi bi-share me-2"></i>Chia sẻ bài viết:</h5>
+                    <div class="d-flex flex-wrap gap-2">
                         <a href="https://www.facebook.com/sharer/sharer.php?u=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>" 
-                           target="_blank" class="btn btn-primary btn-sm">
+                           target="_blank" class="btn btn-primary">
                             <i class="bi bi-facebook me-1"></i>Facebook
                         </a>
                         <a href="https://twitter.com/intent/tweet?url=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>&text=<?= urlencode($article['title']) ?>" 
-                           target="_blank" class="btn btn-info btn-sm">
+                           target="_blank" class="btn btn-info text-white">
                             <i class="bi bi-twitter me-1"></i>Twitter
                         </a>
                         <a href="https://www.linkedin.com/sharing/share-offsite/?url=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>" 
-                           target="_blank" class="btn btn-secondary btn-sm">
+                           target="_blank" class="btn btn-secondary">
                             <i class="bi bi-linkedin me-1"></i>LinkedIn
                         </a>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard()">
+                        <button class="btn btn-outline-secondary" onclick="copyToClipboard()">
                             <i class="bi bi-link-45deg me-1"></i>Copy Link
                         </button>
                     </div>
@@ -124,20 +156,33 @@
 
                 <!-- Related Articles -->
                 <?php if (!empty($relatedArticles)): ?>
-                <div class="mt-5">
-                    <h4>Bài viết liên quan</h4>
-                    <div class="row">
+                <div class="mt-5 related-articles">
+                    <h4 class="mb-4">
+                        <i class="bi bi-newspaper me-2"></i>Bài viết liên quan
+                    </h4>
+                    <div class="row g-4">
                         <?php foreach ($relatedArticles as $related): ?>
-                        <div class="col-md-6 mb-3">
-                            <div class="card">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <?php if ($related['featured_image']): ?>
+                                <img src="<?= BASE_URL ?>/uploads/articles/<?= htmlspecialchars($related['featured_image']) ?>" 
+                                     class="card-img-top" alt="<?= htmlspecialchars($related['title']) ?>"
+                                     style="height: 150px; object-fit: cover;">
+                                <?php endif; ?>
                                 <div class="card-body">
                                     <h6 class="card-title">
-                                        <a href="<?= BASE_URL ?>/article/<?= urlencode($related['slug']) ?>" class="text-decoration-none">
+                                        <a href="<?= BASE_URL ?>/article/<?= urlencode($related['slug']) ?>" 
+                                           class="text-decoration-none">
                                             <?= htmlspecialchars($related['title']) ?>
                                         </a>
                                     </h6>
                                     <p class="card-text small text-muted">
+                                        <i class="bi bi-calendar3 me-1"></i>
                                         <?= date('d/m/Y', strtotime($related['created_at'])) ?>
+                                        <span class="ms-2">
+                                            <i class="bi bi-eye me-1"></i>
+                                            <?= number_format($related['views'] ?? 0) ?>
+                                        </span>
                                     </p>
                                 </div>
                             </div>
@@ -151,8 +196,8 @@
             <!-- Sidebar -->
             <div class="col-lg-4">
                 <div class="social-share">
-                    <div class="card">
-                        <div class="card-header">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
                             <h6 class="mb-0">
                                 <i class="bi bi-share me-2"></i>Chia sẻ bài viết
                             </h6>
@@ -163,7 +208,7 @@
                                 <i class="bi bi-facebook me-2"></i>Facebook
                             </a>
                             <a href="https://twitter.com/intent/tweet?url=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>&text=<?= urlencode($article['title']) ?>" 
-                               target="_blank" class="share-btn btn btn-info">
+                               target="_blank" class="share-btn btn btn-info text-white">
                                 <i class="bi bi-twitter me-2"></i>Twitter
                             </a>
                             <a href="https://www.linkedin.com/sharing/share-offsite/?url=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>" 
@@ -175,26 +220,74 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <?php if (\App\Core\Auth::check() && 
+                             (\App\Core\Auth::user()['id'] === $article['user_id'] || \App\Core\Auth::isAdmin())): ?>
+                    <div class="card">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0">
+                                <i class="bi bi-pencil-square me-2"></i>Quản lý bài viết
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <a href="<?= BASE_URL ?>/article/<?= $article['id'] ?>/edit" 
+                               class="btn btn-warning w-100 mb-2">
+                                <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa
+                            </a>
+                            <form action="<?= BASE_URL ?>/article/<?= $article['id'] ?>/delete" 
+                                  method="POST" 
+                                  onsubmit="return confirm('Bạn có chắc muốn xóa bài viết này?');">
+                                <input type="hidden" name="csrf" value="<?= $csrf ?>">
+                                <button type="submit" class="btn btn-danger w-100">
+                                    <i class="bi bi-trash me-2"></i>Xóa bài viết
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </article>
 
     <!-- Comments Section -->
-    <?php include APP_PATH . '/views/articles/comments.php'; ?>
+    <div data-article-id="<?= $article['id'] ?>">
+        <?php include APP_PATH . '/views/articles/comments.php'; ?>
+    </div>
 
-
+    <?php include APP_PATH . '/views/layouts/footer.php'; ?>
 
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Comments JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Pass PHP variables to JavaScript -->
+    <script>
+        // Global configuration
+        window.BASE_URL = '<?= BASE_URL ?>';
+        
+        // Current user data (if logged in)
+        <?php if (\App\Core\Auth::check()): ?>
+        window.currentUser = {
+            id: <?= \App\Core\Auth::user()['id'] ?>,
+            name: <?= json_encode(\App\Core\Auth::user()['name']) ?>,
+            email: <?= json_encode(\App\Core\Auth::user()['email']) ?>,
+            role_id: <?= \App\Core\Auth::user()['role_id'] ?? 1 ?>
+        };
+        <?php else: ?>
+        window.currentUser = null;
+        <?php endif; ?>
+        
+        // Admin check
+        window.isAdmin = <?= \App\Core\Auth::check() && \App\Core\Auth::isAdmin() ? 'true' : 'false' ?>;
+    </script>
+    
+    <!-- Comments System JS -->
     <script src="<?= BASE_URL ?>/js/comments.js"></script>
     
     <script>
         function copyToClipboard() {
             const url = window.location.href;
             navigator.clipboard.writeText(url).then(() => {
-                // Show success message
                 const toast = document.createElement('div');
                 toast.className = 'toast align-items-center text-white bg-success border-0';
                 toast.setAttribute('role', 'alert');
@@ -216,7 +309,7 @@
                 }
                 
                 toastContainer.appendChild(toast);
-                const bsToast = new bootstrap.Toast(toast);
+                const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
                 bsToast.show();
                 
                 toast.addEventListener('hidden.bs.toast', () => {
