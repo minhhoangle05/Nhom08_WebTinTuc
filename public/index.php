@@ -167,7 +167,11 @@ $router->get('/admin/users/:id', 'AdminController@userDetail');
 $router->get('/admin/users/:id/edit', 'AdminController@editUserPage');
 $router->post('/admin/users/:id/update', 'AdminController@updateUser');
 $router->post('/admin/users/:id/delete', 'AdminController@deleteUser');
-
+// ========================================
+// API ROUTES
+// ========================================
+$router->post('/api/summarize', 'ApiController@summarize');
+$router->post('/api/summarize-local', 'ApiController@summarizeLocal');
 // ========================================
 // DISPATCH REQUEST
 // ========================================

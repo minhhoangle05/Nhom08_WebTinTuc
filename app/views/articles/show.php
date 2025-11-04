@@ -12,6 +12,95 @@
     <link href="<?= BASE_URL ?>/css/style.css" rel="stylesheet">
     
     <style>
+        /* CSS cho AI Summary Section */
+.ai-summary-section {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    color: white;
+}
+
+.btn-gradient:active {
+    transform: translateY(0);
+}
+
+.btn-gradient:disabled {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+#summaryContainer {
+    animation: slideDown 0.4s ease-out;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.summary-content {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #374151;
+}
+
+.summary-text {
+    padding: 1rem;
+    background: linear-gradient(to right, #f9fafb 0%, #ffffff 100%);
+    border-left: 4px solid #667eea;
+    border-radius: 0.5rem;
+    position: relative;
+}
+
+.summary-text::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+    border-radius: 0.5rem;
+    pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn-gradient {
+        font-size: 0.95rem;
+        padding: 0.75rem;
+    }
+    
+    .summary-content {
+        font-size: 1rem;
+    }
+}
         .bookmark-btn {
     transition: all 0.3s ease;
 }
@@ -81,6 +170,7 @@
         }
     </style>
 </head>
+
 <body>
     <article class="container my-5">
         <div class="row">
@@ -134,7 +224,28 @@
                          class="img-fluid rounded shadow">
                 </div>
                 <?php endif; ?>
-
+<!-- AI Summary Section - Thêm phần này sau article-summary -->
+<div class="ai-summary-section mb-4">
+    <button id="summarizeBtn" class="btn btn-gradient btn-lg w-100">
+        <i class="bi bi-stars me-2"></i>Tóm tắt bài viết bằng AI
+    </button>
+    
+    <!-- Container hiển thị kết quả tóm tắt -->
+    <div id="summaryContainer" class="card mt-3 d-none">
+        <div class="card-header bg-primary bg-gradient text-white">
+            <h6 class="mb-0">
+                <i class="bi bi-lightbulb me-2"></i>Tóm tắt nội dung
+            </h6>
+        </div>
+        <div class="card-body">
+            <div id="summaryContent" class="summary-content"></div>
+        </div>
+        <div class="card-footer text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Tóm tắt được tạo tự động bằng AI
+        </div>
+    </div>
+</div>
                 <div class="article-content">
                     <?= nl2br(htmlspecialchars($article['content'])) ?>
                 </div>
@@ -153,27 +264,7 @@
                 </div>
                 <?php endif; ?>
 
-                <!-- Social Share -->
-                <div class="mt-4 mb-4 p-3 bg-light rounded">
-                    <h5 class="mb-3"><i class="bi bi-share me-2"></i>Chia sẻ bài viết:</h5>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a href="https://www.facebook.com/sharer/sharer.php?u=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>" 
-                           target="_blank" class="btn btn-primary">
-                            <i class="bi bi-facebook me-1"></i>Facebook
-                        </a>
-                        <a href="https://twitter.com/intent/tweet?url=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>&text=<?= urlencode($article['title']) ?>" 
-                           target="_blank" class="btn btn-info text-white">
-                            <i class="bi bi-twitter me-1"></i>Twitter
-                        </a>
-                        <a href="https://www.linkedin.com/sharing/share-offsite/?url=<?= urlencode(BASE_URL . '/article/' . $article['slug']) ?>" 
-                           target="_blank" class="btn btn-secondary">
-                            <i class="bi bi-linkedin me-1"></i>LinkedIn
-                        </a>
-                        <button class="btn btn-outline-secondary" onclick="copyToClipboard()">
-                            <i class="bi bi-link-45deg me-1"></i>Copy Link
-                        </button>
-                    </div>
-                </div>
+                
                 <?php
 // Kiểm tra xem user đã bookmark bài viết này chưa
 $isBookmarked = false;
@@ -271,31 +362,6 @@ if (\App\Core\Auth::check()) {
                             </button>
                         </div>
                     </div>
-                    
-                    <?php if (\App\Core\Auth::check() && 
-                             (\App\Core\Auth::user()['id'] === $article['user_id'] || \App\Core\Auth::isAdmin())): ?>
-                    <div class="card">
-                        <div class="card-header bg-warning">
-                            <h6 class="mb-0">
-                                <i class="bi bi-pencil-square me-2"></i>Quản lý bài viết
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <a href="<?= BASE_URL ?>/articles/edit/<?= $article['id'] ?>"  
-                               class="btn btn-warning w-100 mb-2">
-                                <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa
-                            </a>
-                            <form action="<?= BASE_URL ?>/article/<?= $article['id'] ?>/delete" 
-                                  method="POST" 
-                                  onsubmit="return confirm('Bạn có chắc muốn xóa bài viết này?');">
-                                <input type="hidden" name="csrf" value="<?= $csrf ?>">
-                                <button type="submit" class="btn btn-danger w-100">
-                                    <i class="bi bi-trash me-2"></i>Xóa bài viết
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -308,11 +374,10 @@ if (\App\Core\Auth::check()) {
         <?php include APP_PATH . '/views/articles/comments.php'; ?>
     </div>
 
-    <?php include APP_PATH . '/views/layouts/footer.php'; ?>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+    <script src="<?= BASE_URL ?>/js/article-ai.js"></script>
     <!-- Pass PHP variables to JavaScript -->
     <script>
         // Global configuration
