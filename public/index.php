@@ -61,6 +61,13 @@ $router->post('/auth/forgot-password', 'AuthController@processForgotPassword');
 $router->get('/auth/reset-password/:token', 'AuthController@resetPassword');
 $router->post('/auth/reset-password', 'AuthController@processResetPassword');
 
+// Danh sách bài viết yêu thích (cần đăng nhập)
+$router->get('/bookmarks', 'BookmarkController@index');
+$router->post('/bookmarks/toggle', 'BookmarkController@toggle');
+$router->post('/bookmarks/add', 'BookmarkController@add');
+$router->post('/bookmarks/remove', 'BookmarkController@remove');
+$router->get('/bookmarks/check', 'BookmarkController@check');
+
 // ========================================
 // ARTICLE ROUTES
 // ========================================
@@ -165,3 +172,5 @@ $router->post('/admin/users/:id/delete', 'AdminController@deleteUser');
 // DISPATCH REQUEST
 // ========================================
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+
+

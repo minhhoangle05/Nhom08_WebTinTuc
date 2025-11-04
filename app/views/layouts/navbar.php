@@ -24,6 +24,13 @@
                     <li class="nav-item">
                         <a class="nav-link" href="<?= BASE_URL ?>/articles/create">Viết bài</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/bookmarks') !== false ? 'active' : '' ?>" 
+                           href="<?= BASE_URL ?>/bookmarks">
+                            <i class="bi bi-bookmark-heart-fill me-1"></i>
+                            Yêu thích
+                        </a>
+                    </li>
                 <?php endif; ?>
             </ul>
 
@@ -40,10 +47,19 @@
                             <?= htmlspecialchars(App\Core\Auth::user()['name']) ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/account/profile">Tài khoản</a></li>
-                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/articles/drafts">Bài nháp</a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/account/profile">
+                                <i class="bi bi-person me-2"></i>Tài khoản
+                            </a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/bookmarks">
+                                <i class="bi bi-bookmark-heart me-2"></i>Yêu thích
+                            </a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/articles/drafts">
+                                <i class="bi bi-file-earmark-text me-2"></i>Bài nháp
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/auth/logout">Đăng xuất</a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/auth/logout">
+                                <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                            </a></li>
                         </ul>
                     </li>
                 <?php else: ?>

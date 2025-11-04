@@ -13,6 +13,11 @@ class Auth
         return self::user() !== null;
     }
 
+    public static function id(): ?int
+    {
+        $user = self::user();
+        return $user ? (int)$user['id'] : null;
+    }
     public static function login(array $user, bool $remember = false): void
     {
         Session::set('user', $user);

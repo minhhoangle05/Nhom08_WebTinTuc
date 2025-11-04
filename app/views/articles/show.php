@@ -12,6 +12,30 @@
     <link href="<?= BASE_URL ?>/css/style.css" rel="stylesheet">
     
     <style>
+        .bookmark-btn {
+    transition: all 0.3s ease;
+}
+
+.bookmark-btn:not(.bookmarked):hover {
+    background-color: #dc3545;
+    color: white;
+    transform: scale(1.05);
+}
+
+.bookmark-btn.bookmarked {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.bookmark-btn.bookmarked:hover {
+    background-color: #bb2d3b;
+    border-color: #bb2d3b;
+}
+#bookmarkCount {
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
         .article-header {
             border-bottom: 1px solid #eee;
             margin-bottom: 2rem;
@@ -58,9 +82,6 @@
     </style>
 </head>
 <body>
-    <!-- Navigation (include your header here) -->
-    <?php include APP_PATH . '/views/layouts/header.php'; ?>
-
     <article class="container my-5">
         <div class="row">
             <div class="col-lg-8">
@@ -153,7 +174,37 @@
                         </button>
                     </div>
                 </div>
+                <?php
+// Kiểm tra xem user đã bookmark bài viết này chưa
+$isBookmarked = false;
+if (\App\Core\Auth::check()) {
+    $bookmarkModel = new \App\Models\Bookmark();
+    $isBookmarked = $bookmarkModel->isBookmarked(\App\Core\Auth::id(), $article['id']);
+}
+?>
 
+<!-- Bookmark Card -->
+<?php if (\App\Core\Auth::check()): ?>
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+        <h6 class="mb-0">
+            <i class="bi bi-bookmark-heart me-2"></i>Lưu bài viết
+        </h6>
+    </div>
+    <div class="card-body text-center">
+        <button id="bookmarkBtn" 
+                class="btn btn-outline-danger w-100 bookmark-btn <?= $isBookmarked ? 'bookmarked' : '' ?>"
+                data-article-id="<?= $article['id'] ?>"
+                data-bookmarked="<?= $isBookmarked ? 'true' : 'false' ?>">
+            <i class="bi bi-bookmark-heart<?= $isBookmarked ? '-fill' : '' ?> me-2"></i>
+            <span class="bookmark-text"><?= $isBookmarked ? 'Đã lưu' : 'Lưu bài viết' ?></span>
+        </button>
+        <p class="small text-muted mt-2 mb-0">
+            <span id="bookmarkCount">0</span> người đã lưu
+        </p>
+    </div>
+</div>
+<?php endif; ?>
                 <!-- Related Articles -->
                 <?php if (!empty($relatedArticles)): ?>
                 <div class="mt-5 related-articles">
@@ -230,7 +281,7 @@
                             </h6>
                         </div>
                         <div class="card-body">
-                            <a href="<?= BASE_URL ?>/article/<?= $article['id'] ?>/edit" 
+                            <a href="<?= BASE_URL ?>/articles/edit/<?= $article['id'] ?>"  
                                class="btn btn-warning w-100 mb-2">
                                 <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa
                             </a>
@@ -249,6 +300,8 @@
             </div>
         </div>
     </article>
+
+    
 
     <!-- Comments Section -->
     <div data-article-id="<?= $article['id'] ?>">
@@ -319,6 +372,152 @@
                 alert('Không thể copy link. Vui lòng thử lại.');
             });
         }
+        // Bookmark functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const bookmarkBtn = document.getElementById('bookmarkBtn');
+    const bookmarkCountEl = document.getElementById('bookmarkCount');
+    
+    if (!bookmarkBtn) return;
+    
+    // Load bookmark count khi trang load
+    loadBookmarkCount();
+    
+    bookmarkBtn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const articleId = this.dataset.articleId;
+        
+        // Disable button during request
+        this.disabled = true;
+        
+        try {
+            console.log('Sending bookmark request for article:', articleId);
+            
+            const response = await fetch('<?= BASE_URL ?>/bookmarks/toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ article_id: parseInt(articleId) })
+            });
+            
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('Response data:', data);
+            
+            if (data.success) {
+                // Update button state
+                updateBookmarkUI(data.bookmarked, data.count);
+                
+                // Show toast
+                showToast('success', data.message);
+            } else {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    showToast('error', data.message || 'Có lỗi xảy ra');
+                }
+            }
+        } catch (error) {
+            console.error('Bookmark error:', error);
+            showToast('error', 'Không thể kết nối đến server');
+        } finally {
+            this.disabled = false;
+        }
+    });
+    
+    function updateBookmarkUI(isBookmarked, count) {
+        const icon = bookmarkBtn.querySelector('i');
+        const text = bookmarkBtn.querySelector('.bookmark-text');
+        
+        if (isBookmarked) {
+            bookmarkBtn.classList.add('bookmarked');
+            icon.classList.remove('bi-bookmark-heart');
+            icon.classList.add('bi-bookmark-heart-fill');
+            text.textContent = 'Đã lưu';
+            bookmarkBtn.dataset.bookmarked = 'true';
+        } else {
+            bookmarkBtn.classList.remove('bookmarked');
+            icon.classList.remove('bi-bookmark-heart-fill');
+            icon.classList.add('bi-bookmark-heart');
+            text.textContent = 'Lưu bài viết';
+            bookmarkBtn.dataset.bookmarked = 'false';
+        }
+        
+        // Update count with animation
+        if (count !== undefined && bookmarkCountEl) {
+            bookmarkCountEl.textContent = count;
+            bookmarkCountEl.style.transform = 'scale(1.3)';
+            setTimeout(() => {
+                bookmarkCountEl.style.transform = 'scale(1)';
+            }, 200);
+        }
+    }
+    
+    async function loadBookmarkCount() {
+        try {
+            const articleId = bookmarkBtn.dataset.articleId;
+            const response = await fetch('<?= BASE_URL ?>/bookmarks/check?article_id=' + articleId);
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            console.log('Bookmark check:', data);
+            
+            if (data.success) {
+                // Update count
+                if (data.count !== undefined && bookmarkCountEl) {
+                    bookmarkCountEl.textContent = data.count;
+                }
+                
+                // Update button state nếu đã bookmark
+                if (data.bookmarked) {
+                    updateBookmarkUI(true, data.count);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading bookmark count:', error);
+        }
+    }
+});
+
+function showToast(type, message) {
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
     </script>
 </body>
 </html>
