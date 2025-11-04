@@ -229,7 +229,7 @@
                                                         class="btn btn-outline-danger" 
                                                         onclick="deleteUser(<?= $user['id'] ?>, '<?= htmlspecialchars($user['name']) ?>')"
                                                         title="Xóa"
-                                                        <?= $user['role_id'] === 1 ? 'disabled' : '' ?>>
+                                                        <?= $user['role_id'] === 3 ? 'disabled' : '' ?>>
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>

@@ -85,6 +85,38 @@ class Article extends Model
             throw new \Exception('Không thể tạo bài viết. Vui lòng thử lại sau.');
         }
     }
+    public function insertArticle($data)
+{
+    $stmt = $this->db->prepare("
+        INSERT INTO articles (
+            user_id, title, summary, slug, content,
+            views, created_at, updated_at, source_url, source_name,
+            auto_generated
+        )
+        VALUES (
+            :user_id, :title, :summary,:slug, :content,
+            :views, :created_at, :updated_at, :source_url, :source_name,
+            :auto_generated
+        )
+    ");
+
+    $stmt->execute([
+        ':user_id'        => $data['user_id'],
+        ':title'          => $data['title'],
+        ':summary'        => $data['summary'],
+        ':slug'           => $data['slug'],
+        ':content'        => $data['content'],
+        ':views'          => $data['views'],
+        ':created_at'     => $data['created_at'],
+        ':updated_at'     => $data['updated_at'],
+        ':source_url'     => $data['source_url'],
+        ':source_name'    => $data['source_name'],
+        ':auto_generated' => $data['auto_generated'],
+    ]);
+}
+
+
+
 
     protected function buildBaseQuery(): string
     {
