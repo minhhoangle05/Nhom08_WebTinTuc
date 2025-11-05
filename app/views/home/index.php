@@ -229,24 +229,7 @@ try {
                 </div>
             </div>
 
-            <!-- Newsletter -->
-            <div class="card sidebar-widget mb-4">
-                <div class="card-body">
-                    <h3 class="h5 mb-3">
-                        <i class="bi bi-envelope-paper-fill text-primary me-2"></i>
-                        Đăng ký nhận tin
-                    </h3>
-                    <p class="text-muted small mb-3">Nhận thông báo khi có bài viết mới và các cập nhật thú vị!</p>
-                    <form class="newsletter-form">
-                        <div class="input-group">
-                            <input type="email" class="form-control" placeholder="Email của bạn">
-                            <button class="btn btn-primary" type="submit">
-                                <i class="bi bi-send"></i>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+
         </div>
         </div>
     </div>

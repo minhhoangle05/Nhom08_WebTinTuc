@@ -13,8 +13,175 @@
     
     <style>
         /* CSS cho AI Summary Section */
+.article-header {
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+}
+
+.article-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #1a1a1a;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.02em;
+}
+
+.article-meta {
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.article-meta a {
+    color: #495057;
+    transition: color 0.3s ease;
+}
+
+.article-meta a:hover {
+    color: #667eea;
+}
+
+/* Article Summary Box */
+.article-summary {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: #495057;
+    margin-bottom: 2.5rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 5px solid #667eea;
+    border-radius: 8px;
+    font-weight: 400;
+    text-align: justify;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Featured Image */
+.text-center.mb-4 img {
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    max-width: 100%;
+    height: auto;
+}
+
+/* Main Article Content - IMPROVED TYPOGRAPHY */
+.article-content {
+    font-size: 1.125rem;
+    line-height: 1.9;
+    color: #2d3748;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    -moz-hyphens: auto;
+    word-spacing: 0.05em;
+    letter-spacing: 0.01em;
+}
+
+/* Paragraphs */
+.article-content p {
+    margin-bottom: 1.5rem;
+    text-indent: 0;
+}
+
+.article-content p:first-of-type::first-letter {
+    font-size: 3.5em;
+    line-height: 0.9;
+    float: left;
+    margin: 0.1em 0.15em 0 0;
+    font-weight: 700;
+    color: #667eea;
+}
+
+/* Headings trong content */
+.article-content h2,
+.article-content h3,
+.article-content h4 {
+    margin-top: 2.5rem;
+    margin-bottom: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.4;
+}
+
+.article-content h2 {
+    font-size: 2rem;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 0.5rem;
+}
+
+.article-content h3 {
+    font-size: 1.5rem;
+    color: #495057;
+}
+
+.article-content h4 {
+    font-size: 1.25rem;
+    color: #6c757d;
+}
+
+/* Lists */
+.article-content ul,
+.article-content ol {
+    margin-bottom: 1.5rem;
+    padding-left: 2rem;
+}
+
+.article-content li {
+    margin-bottom: 0.75rem;
+    line-height: 1.8;
+}
+
+/* Blockquotes */
+.article-content blockquote {
+    border-left: 4px solid #667eea;
+    padding: 1.5rem 2rem;
+    margin: 2rem 0;
+    background: #f8f9fa;
+    font-style: italic;
+    font-size: 1.15rem;
+    color: #495057;
+    border-radius: 0 8px 8px 0;
+}
+
+/* Code blocks */
+.article-content code {
+    background: #f1f3f5;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+
+.article-content pre {
+    background: #2d3748;
+    color: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+/* Links trong content */
+.article-content a {
+    color: #667eea;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.article-content a:hover {
+    color: #764ba2;
+    border-bottom-color: #764ba2;
+}
+
+/* AI Summary Section */
 .ai-summary-section {
     animation: fadeIn 0.5s ease-in;
+    margin-bottom: 2.5rem;
 }
 
 @keyframes fadeIn {
@@ -29,6 +196,8 @@
     font-weight: 600;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    padding: 1rem 2rem;
+    font-size: 1.05rem;
 }
 
 .btn-gradient:hover {
@@ -37,20 +206,12 @@
     color: white;
 }
 
-.btn-gradient:active {
-    transform: translateY(0);
-}
-
-.btn-gradient:disabled {
-    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
-    box-shadow: none;
-    cursor: not-allowed;
-}
-
 #summaryContainer {
     animation: slideDown 0.4s ease-out;
     border: none;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 @keyframes slideDown {
@@ -68,47 +229,43 @@
     font-size: 1.05rem;
     line-height: 1.8;
     color: #374151;
+    padding: 1.5rem;
 }
 
 .summary-text {
-    padding: 1rem;
+    padding: 1.5rem;
     background: linear-gradient(to right, #f9fafb 0%, #ffffff 100%);
     border-left: 4px solid #667eea;
-    border-radius: 0.5rem;
+    border-radius: 8px;
     position: relative;
 }
 
-.summary-text::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
-    border-radius: 0.5rem;
-    pointer-events: none;
+/* Tags Section */
+.mt-4.mb-4 {
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin-top: 3rem !important;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .btn-gradient {
-        font-size: 0.95rem;
-        padding: 0.75rem;
-    }
-    
-    .summary-content {
-        font-size: 1rem;
-    }
+.mt-4.mb-4 h5 {
+    color: #1a1a1a;
+    font-weight: 700;
+    margin-bottom: 1rem;
 }
-        .bookmark-btn {
+
+/* Bookmark Card */
+.bookmark-btn {
     transition: all 0.3s ease;
+    padding: 0.875rem;
+    font-weight: 600;
+    font-size: 1.05rem;
 }
 
 .bookmark-btn:not(.bookmarked):hover {
     background-color: #dc3545;
     color: white;
-    transform: scale(1.05);
+    transform: scale(1.02);
 }
 
 .bookmark-btn.bookmarked {
@@ -117,57 +274,165 @@
     border-color: #dc3545;
 }
 
-.bookmark-btn.bookmarked:hover {
-    background-color: #bb2d3b;
-    border-color: #bb2d3b;
-}
 #bookmarkCount {
     transition: transform 0.2s ease;
     display: inline-block;
+    font-weight: 600;
+    font-size: 1.1rem;
 }
-        .article-header {
-            border-bottom: 1px solid #eee;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-        }
-        .article-meta {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        .article-content {
-            line-height: 1.8;
-            font-size: 1.1rem;
-        }
-        .article-summary {
-            font-size: 1.2rem;
-            color: #666;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            border-radius: 0.5rem;
-        }
-        .social-share {
-            position: sticky;
-            top: 100px;
-        }
-        .share-btn {
-            display: block;
-            width: 100%;
-            margin-bottom: 0.5rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        .share-btn:hover {
-            transform: translateX(5px);
-        }
-        .related-articles .card {
-            transition: transform 0.3s ease;
-        }
-        .related-articles .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        }
+
+/* Related Articles */
+.related-articles {
+    margin-top: 4rem;
+    padding-top: 3rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.related-articles h4 {
+    color: #1a1a1a;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+.related-articles .card {
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.related-articles .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.related-articles .card-img-top {
+    border-radius: 0;
+}
+
+.related-articles .card-title a {
+    color: #1a1a1a;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.related-articles .card-title a:hover {
+    color: #667eea;
+}
+
+/* Social Share Sidebar */
+.social-share {
+    position: sticky;
+    top: 100px;
+}
+
+.social-share .card {
+    border: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.social-share .card-header {
+    font-weight: 600;
+    padding: 1.25rem;
+}
+
+.share-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    padding: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.share-btn:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .article-content {
+        font-size: 1.1rem;
+    }
+    
+    .article-header h1 {
+        font-size: 2.25rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .social-share {
+        position: relative;
+        top: 0;
+        margin-top: 3rem;
+    }
+    
+    .article-content {
+        font-size: 1.05rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .article-header h1 {
+        font-size: 1.875rem;
+    }
+    
+    .article-content {
+        font-size: 1rem;
+        line-height: 1.8;
+        text-align: left;
+    }
+    
+    .article-content p:first-of-type::first-letter {
+        font-size: 2.5em;
+    }
+    
+    .article-summary {
+        font-size: 1.05rem;
+        padding: 1.5rem;
+    }
+    
+    .btn-gradient {
+        font-size: 0.95rem;
+        padding: 0.875rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .article-header h1 {
+        font-size: 1.625rem;
+    }
+    
+    .article-content {
+        font-size: 0.95rem;
+    }
+    
+    .article-meta {
+        font-size: 0.85rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .social-share,
+    .ai-summary-section,
+    .related-articles,
+    .bookmark-btn {
+        display: none !important;
+    }
+    
+    .article-content {
+        font-size: 12pt;
+        line-height: 1.6;
+        color: #000;
+    }
+}
     </style>
 </head>
 
@@ -247,7 +512,15 @@
     </div>
 </div>
                 <div class="article-content">
-                    <?= nl2br(htmlspecialchars($article['content'])) ?>
+                    <?php
+$paragraphs = preg_split('/\n\s*\n/', $article['content']);
+foreach ($paragraphs as $paragraph) {
+    $paragraph = trim($paragraph);
+    if (!empty($paragraph)) {
+        echo '<p>' . nl2br(htmlspecialchars($paragraph)) . '</p>';
+    }
+}
+?>
                 </div>
 
                 <?php if (!empty($tags)): ?>
