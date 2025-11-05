@@ -24,49 +24,58 @@ class ArticleController extends Controller
     }
 
     public function index(): void
-    {
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $categorySlug = $_GET['category'] ?? null;
-        $sort = $_GET['sort'] ?? 'latest';
-        
-        $limit = 12;
-        $offset = ($page - 1) * $limit;
-        
-        $filters = [
-            'sort' => $sort
-        ];
-        
-        // Filter by category if provided
-        $currentCategory = null;
-        if ($categorySlug) {
-            $currentCategory = $this->categoryModel->findBySlug($categorySlug);
-            if ($currentCategory) {
-                $filters['category_id'] = $currentCategory['id'];
-            }
+{
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $categorySlug = $_GET['category'] ?? null;
+    $sort = $_GET['sort'] ?? 'latest';
+    
+    $limit = 12;
+    $offset = ($page - 1) * $limit;
+    
+    $filters = [
+        'sort' => $sort
+    ];
+    
+    // Filter by category if provided
+    $currentCategory = null;
+    if ($categorySlug) {
+        $currentCategory = $this->categoryModel->findBySlug($categorySlug);
+        if ($currentCategory) {
+            $filters['category_id'] = $currentCategory['id'];
         }
-        
-        $articles = $this->articleModel->search($filters, $limit, $offset);
-        $total = $this->articleModel->countSearch($filters);
-        $totalPages = ceil($total / $limit);
-        
-        // Get all categories with article counts
-        $categories = $this->categoryModel->withArticleCount();
-        
-        // Get popular articles for sidebar
-        $popularArticles = $this->articleModel->popular(5);
-        
-        $this->view('articles/index', [
-            'title' => $currentCategory ? 'Bài viết - ' . $currentCategory['name'] : 'Tất cả bài viết',
-            'articles' => $articles,
-            'categories' => $categories,
-            'popularArticles' => $popularArticles,
-            'currentCategory' => $currentCategory,
-            'currentSort' => $sort,
-            'currentPage' => $page,
-            'totalPages' => $totalPages,
-            'total' => $total
-        ]);
     }
+    
+    $articles = $this->articleModel->search($filters, $limit, $offset);
+    $total = $this->articleModel->countSearch($filters);
+    $totalPages = (int)ceil($total / $limit);
+    
+    // Get all categories with article counts
+    $categories = $this->categoryModel->withArticleCount();
+    
+    // Get popular articles for sidebar
+    $popularArticles = $this->articleModel->popular(5);
+    
+    // BUILD BASE URL FOR PAGINATION - THÊM PHẦN NÀY
+    $baseUrl = BASE_URL . '/articles?';
+    $queryParams = $_GET;
+    unset($queryParams['page']); // Loại bỏ page khỏi query string
+    if (!empty($queryParams)) {
+        $baseUrl .= http_build_query($queryParams) . '&';
+    }
+    
+    $this->view('articles/index', [
+        'title' => $currentCategory ? 'Bài viết - ' . $currentCategory['name'] : 'Tất cả bài viết',
+        'articles' => $articles,
+        'categories' => $categories,
+        'popularArticles' => $popularArticles,
+        'currentCategory' => $currentCategory,
+        'currentSort' => $sort,
+        'currentPage' => $page,
+        'totalPages' => $totalPages,
+        'total' => $total,
+        'baseUrl' => $baseUrl  // THÊM DÒNG NÀY
+    ]);
+}
 
     public function myArticles(): void
     {
@@ -136,67 +145,78 @@ class ArticleController extends Controller
     }
 
     public function search(): void
-    {
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $categoryParam = $_GET['category'] ?? null;
-        
-        $filters = [
-            'q' => $_GET['q'] ?? null,
-            'tag' => $_GET['tag'] ?? null,
-            'sort' => $_GET['sort'] ?? 'latest'
-        ];
+{
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $categoryParam = $_GET['category'] ?? null;
+    
+    $filters = [
+        'q' => $_GET['q'] ?? null,
+        'tag' => $_GET['tag'] ?? null,
+        'sort' => $_GET['sort'] ?? 'latest'
+    ];
 
-        // Nếu có category, tìm theo slug hoặc name
-        $currentCategory = null;
-        if ($categoryParam) {
-            // Thử tìm theo slug trước
-            $currentCategory = $this->categoryModel->findBySlug($categoryParam);
-            
-            // Nếu không tìm thấy, thử tìm theo name
-            if (!$currentCategory) {
-                $currentCategory = $this->categoryModel->findByName($categoryParam);
-            }
-            
-            if ($currentCategory) {
-                $filters['category_id'] = $currentCategory['id'];
-            }
+    // Nếu có category, tìm theo slug hoặc name
+    $currentCategory = null;
+    if ($categoryParam) {
+        // Thử tìm theo slug trước
+        $currentCategory = $this->categoryModel->findBySlug($categoryParam);
+        
+        // Nếu không tìm thấy, thử tìm theo name
+        if (!$currentCategory) {
+            $currentCategory = $this->categoryModel->findByName($categoryParam);
         }
         
-        $limit = 12;
-        $offset = ($page - 1) * $limit;
-        
-        error_log("Search filters: " . print_r($filters, true));
-        $articles = $this->articleModel->search($filters, $limit, $offset);
-        $total = $this->articleModel->countSearch($filters);
-        $totalPages = ceil($total / $limit);
-        
-        // Get all categories with article counts for sidebar
-        $categories = $this->categoryModel->withArticleCount();
-        
-        // Get popular articles for sidebar
-        $popularArticles = $this->articleModel->popular(5);
-        
-        // Build base URL for pagination
-        $baseUrl = BASE_URL . '/articles/search?';
-        $queryParams = $_GET;
-        unset($queryParams['page']);
-        if (!empty($queryParams)) {
-            $baseUrl .= http_build_query($queryParams) . '&';
+        if ($currentCategory) {
+            $filters['category_id'] = $currentCategory['id'];
         }
-
-        $this->view('articles/index', [
-            'title' => $currentCategory ? 'Bài viết trong danh mục: ' . $currentCategory['name'] : 'Tìm kiếm bài viết',
-            'articles' => $articles,
-            'categories' => $categories,
-            'popularArticles' => $popularArticles,
-            'currentCategory' => $currentCategory,
-            'currentSort' => $filters['sort'],
-            'currentPage' => $page,
-            'totalPages' => $totalPages,
-            'total' => $total,
-            'baseUrl' => $baseUrl
-        ]);
     }
+    
+    $limit = 12;
+    $offset = ($page - 1) * $limit;
+    
+    error_log("Search filters: " . print_r($filters, true));
+    error_log("Limit: $limit, Offset: $offset, Page: $page");
+    
+    $articles = $this->articleModel->search($filters, $limit, $offset);
+    $total = $this->articleModel->countSearch($filters);
+    $totalPages = (int)ceil($total / $limit);
+    
+    error_log("Found {$total} articles, showing page {$page} of {$totalPages}");
+    error_log("Articles count: " . count($articles));
+    
+    // Get all categories with article counts for sidebar
+    $categories = $this->categoryModel->withArticleCount();
+    
+    // Get popular articles for sidebar
+    $popularArticles = $this->articleModel->popular(5);
+    
+    // Build base URL for pagination
+    $baseUrl = BASE_URL . '/articles/search?';
+    $queryParams = $_GET;
+    unset($queryParams['page']);
+    if (!empty($queryParams)) {
+        $baseUrl .= http_build_query($queryParams) . '&';
+    }
+    
+    // Thêm biến để debug
+    error_log("Base URL: " . $baseUrl);
+    error_log("Current page: " . $page);
+
+    $this->view('articles/index', [
+        'title' => $currentCategory ? 'Bài viết trong danh mục: ' . $currentCategory['name'] : 'Tìm kiếm bài viết',
+        'articles' => $articles,
+        'categories' => $categories,
+        'popularArticles' => $popularArticles,
+        'currentCategory' => $currentCategory,
+        'currentSort' => $filters['sort'],
+        'currentPage' => $page,
+        'totalPages' => $totalPages,
+        'total' => $total,
+        'baseUrl' => $baseUrl,
+        'query' => $filters['q'] ?? null,
+        'category' => $categoryParam
+    ]);
+}
 
     public function create(): void
     {

@@ -188,6 +188,7 @@ class Article extends Model
      */
     public function search(array $params = [], int $limit = 10, int $offset = 0): array
     {
+        error_log("Article::search called with limit=$limit, offset=$offset");
         error_log("Starting article search with params: " . print_r($params, true));
         
         $conditions = $this->buildSearchConditions($params);
