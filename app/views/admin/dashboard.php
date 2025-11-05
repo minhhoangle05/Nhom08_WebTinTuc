@@ -1,3 +1,8 @@
+<!-- Thêm vào đầu file dashboard.php để debug -->
+<?php 
+error_log("CSRF token in view: " . ($csrf ?? 'NOT SET'));
+error_log("Session CSRF: " . ($_SESSION['csrf_token'] ?? 'NOT SET'));
+?>
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><?= htmlspecialchars($title) ?></h2>
@@ -172,8 +177,9 @@
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 <button type="button" 
-                                                        class="btn btn-outline-danger" 
-                                                        onclick="deleteArticle(<?= $article['id'] ?>, '<?= htmlspecialchars($article['title']) ?>')"
+                                                        class="btn btn-outline-danger delete-article-btn" 
+                                                        data-id="<?= $article['id'] ?>"
+                                                        data-title="<?= htmlspecialchars($article['title'], ENT_QUOTES) ?>"
                                                         title="Xóa">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -187,7 +193,31 @@
                 </div>
             </div>
         </div>
-
+<!-- Delete Article Modal -->
+<div class="modal fade" id="deleteArticleModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Xác nhận xóa bài viết</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn xóa bài viết <strong id="deleteArticleTitle"></strong>?</p>
+        <p class="text-danger mb-0">
+          <i class="bi bi-exclamation-triangle"></i> 
+          Hành động này không thể hoàn tác!
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="deleteArticleForm" method="POST" class="d-inline">
+          <input type="hidden" name="csrf" value="<?= $csrf ?>">
+          <button type="submit" class="btn btn-danger">Xóa</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
         <!-- Người dùng mới -->
         <div class="col-lg-6">
             <div class="card h-100">
@@ -226,8 +256,9 @@
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                                 <button type="button" 
-                                                        class="btn btn-outline-danger" 
-                                                        onclick="deleteUser(<?= $user['id'] ?>, '<?= htmlspecialchars($user['name']) ?>')"
+                                                        class="btn btn-outline-danger delete-user-btn" 
+                                                        data-id="<?= $user['id'] ?>"
+                                                        data-name="<?= htmlspecialchars($user['name'], ENT_QUOTES) ?>"
                                                         title="Xóa"
                                                         <?= $user['role_id'] === 3 ? 'disabled' : '' ?>>
                                                     <i class="bi bi-trash"></i>
@@ -243,6 +274,32 @@
             </div>
         </div>
 
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Xác nhận xóa người dùng</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn xóa người dùng <strong id="deleteUserName"></strong>?</p>
+        <p class="text-danger mb-0">
+          <i class="bi bi-exclamation-triangle"></i> 
+          Hành động này không thể hoàn tác!
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="deleteUserForm" method="POST" class="d-inline">
+          <input type="hidden" name="csrf" value="<?= $csrf ?>">
+          <button type="submit" class="btn btn-danger">Xóa</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
         <!-- Thống kê theo danh mục -->
         <div class="col-lg-6">
             <div class="card h-100">
@@ -322,10 +379,7 @@
     </div>
 </div>
 
-<!-- Form xóa ẩn -->
-<form id="deleteForm" method="POST" style="display: none;">
-    <input type="hidden" name="csrf" value="<?= $csrf ?>">
-</form>
+
 
 <style>
 .card {
@@ -346,19 +400,31 @@
 </style>
 
 <script>
-function deleteArticle(id, title) {
-    if (confirm(`Bạn có chắc chắn muốn xóa bài viết "${title}"?`)) {
-        const form = document.getElementById('deleteForm');
-        form.action = '<?= BASE_URL ?>/admin/articles/' + id + '/delete';
-        form.submit();
-    }
-}
-
-function deleteUser(id, name) {
-    if (confirm(`Bạn có chắc chắn muốn xóa người dùng "${name}"? Hành động này không thể hoàn tác!`)) {
-        const form = document.getElementById('deleteForm');
-        form.action = '<?= BASE_URL ?>/admin/users/' + id + '/delete';
-        form.submit();
-    }
-}
+document.addEventListener('DOMContentLoaded', function() {
+    // Xóa bài viết
+    document.querySelectorAll('.delete-article-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const title = this.getAttribute('data-title');
+            
+            document.getElementById('deleteArticleTitle').textContent = title;
+            document.getElementById('deleteArticleForm').action = '<?= BASE_URL ?>/admin/articles/' + id + '/delete';
+            
+            new bootstrap.Modal(document.getElementById('deleteArticleModal')).show();
+        });
+    });
+    
+    // Xóa người dùng
+    document.querySelectorAll('.delete-user-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.getAttribute('data-name');
+            
+            document.getElementById('deleteUserName').textContent = name;
+            document.getElementById('deleteUserForm').action = '<?= BASE_URL ?>/admin/users/' + id + '/delete';
+            
+            new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+        });
+    });
+});
 </script>

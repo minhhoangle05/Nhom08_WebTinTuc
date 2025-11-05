@@ -339,7 +339,7 @@
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="<?= BASE_URL ?>/article/<?= $article['id'] ?>/update" enctype="multipart/form-data">
+        <form method="POST" action="<?= BASE_URL ?>/articles/<?= $article['id'] ?>/update" enctype="multipart/form-data">
             <input type="hidden" name="csrf" value="<?= $csrf ?>">
 
             <!-- Tiêu đề -->

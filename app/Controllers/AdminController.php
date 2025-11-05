@@ -43,7 +43,8 @@ class AdminController extends Controller
             'latestArticles' => $this->adminModel->getLatestArticles(5),
             'latestUsers' => $this->adminModel->getLatestUsers(5),
             'categoryStats' => $this->adminModel->getCategoryStatistics(),
-            'popularArticles' => $this->adminModel->getPopularArticles(5)
+            'popularArticles' => $this->adminModel->getPopularArticles(5),
+            'csrf' => CSRF::token()
         ]);
     }
 
