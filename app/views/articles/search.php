@@ -105,18 +105,3 @@
     </ul>
 </nav>
 <?php endif; ?>
-<script>
-// Debug pagination
-console.log('Current page:', <?= $currentPage ?>);
-console.log('Total pages:', <?= $totalPages ?>);
-console.log('Total articles:', <?= $total ?>);
-console.log('Articles shown:', <?= count($articles) ?>);
-console.log('Base URL:', '<?= addslashes($baseUrl) ?>');
-
-// Log khi click pagination
-document.querySelectorAll('.pagination a').forEach(link => {
-    link.addEventListener('click', function(e) {
-        console.log('Clicked link:', this.href);
-    });
-});
-</script>
