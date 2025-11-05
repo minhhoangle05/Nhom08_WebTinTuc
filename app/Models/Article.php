@@ -90,12 +90,12 @@ class Article extends Model
     $stmt = $this->db->prepare("
         INSERT INTO articles (
             user_id, title, summary, slug, content,
-            views, created_at, updated_at, source_url, source_name,
+            views, created_at, updated_at, source_url, source_name,featured_image,
             auto_generated
         )
         VALUES (
             :user_id, :title, :summary,:slug, :content,
-            :views, :created_at, :updated_at, :source_url, :source_name,
+            :views, :created_at, :updated_at, :source_url, :source_name, :featured_image,
             :auto_generated
         )
     ");
@@ -111,6 +111,7 @@ class Article extends Model
         ':updated_at'     => $data['updated_at'],
         ':source_url'     => $data['source_url'],
         ':source_name'    => $data['source_name'],
+        ':featured_image' => $data['featured_image'],
         ':auto_generated' => $data['auto_generated'],
     ]);
 }

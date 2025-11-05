@@ -11,12 +11,170 @@ use DOMXPath;
 class AutoNewsController
 {
     /**
+     * Tải ảnh từ URL về server và lưu vào thư mục uploads
+     */
+    private function downloadImage($imageUrl, $articleTitle)
+    {
+        try {
+            // Kiểm tra URL hợp lệ
+            if (empty($imageUrl) || !filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                error_log("Invalid image URL: {$imageUrl}");
+                return null;
+            }
+
+            // Tạo thư mục uploads nếu chưa có
+            $uploadDir = BASE_PATH . '/public/uploads/articles/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            // Tạo context với user agent để tránh bị chặn
+            $context = stream_context_create([
+                'http' => [
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'timeout' => 10,
+                    'follow_location' => true
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                ]
+            ]);
+
+            // Tải ảnh
+            $imageData = @file_get_contents($imageUrl, false, $context);
+            
+            if ($imageData === false) {
+                error_log("Cannot download image: {$imageUrl}");
+                return null;
+            }
+
+            // Kiểm tra kích thước ảnh (giới hạn 5MB)
+            if (strlen($imageData) > 5 * 1024 * 1024) {
+                error_log("Image too large: {$imageUrl}");
+                return null;
+            }
+
+            // Lấy extension từ URL hoặc phát hiện từ content
+            $extension = $this->getImageExtension($imageUrl, $imageData);
+            
+            if (!$extension) {
+                error_log("Cannot determine image extension: {$imageUrl}");
+                return null;
+            }
+
+            // Tạo tên file unique
+            $safeTitle = preg_replace('/[^a-z0-9\-]/i', '-', $articleTitle);
+            $safeTitle = substr($safeTitle, 0, 50); // Giới hạn độ dài
+            $fileName = uniqid('rss_', true) . '-' . $safeTitle . '.' . $extension;
+            $filePath = $uploadDir . $fileName;
+
+            // Lưu file
+            if (file_put_contents($filePath, $imageData) === false) {
+                error_log("Cannot save image: {$filePath}");
+                return null;
+            }
+
+            // Kiểm tra file có phải ảnh hợp lệ không
+            $imageInfo = @getimagesize($filePath);
+            if ($imageInfo === false) {
+                @unlink($filePath);
+                error_log("Invalid image file: {$filePath}");
+                return null;
+            }
+
+            echo "  ✓ Đã tải ảnh: {$fileName}\n";
+            return $fileName; // Chỉ trả về tên file, không có path
+
+        } catch (Exception $e) {
+            error_log("Error downloading image: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Xác định extension của ảnh
+     */
+    private function getImageExtension($url, $imageData)
+    {
+        // Thử lấy từ URL trước
+        $urlParts = parse_url($url);
+        if (isset($urlParts['path'])) {
+            $pathInfo = pathinfo($urlParts['path']);
+            if (isset($pathInfo['extension'])) {
+                $ext = strtolower($pathInfo['extension']);
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    return $ext;
+                }
+            }
+        }
+
+        // Phát hiện từ content nếu không lấy được từ URL
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->buffer($imageData);
+
+        $mimeToExt = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp'
+        ];
+
+        return $mimeToExt[$mimeType] ?? null;
+    }
+
+    /**
+     * Trích xuất URL ảnh từ RSS item
+     */
+    private function extractImageUrl($item, $description)
+    {
+        // 1. Kiểm tra media:content (RSS 2.0 Media)
+        if (isset($item->children('media', true)->content)) {
+            $mediaContent = $item->children('media', true)->content;
+            if (isset($mediaContent['url'])) {
+                return (string)$mediaContent['url'];
+            }
+        }
+
+        // 2. Kiểm tra media:thumbnail
+        if (isset($item->children('media', true)->thumbnail)) {
+            $mediaThumbnail = $item->children('media', true)->thumbnail;
+            if (isset($mediaThumbnail['url'])) {
+                return (string)$mediaThumbnail['url'];
+            }
+        }
+
+        // 3. Kiểm tra enclosure
+        if (isset($item->enclosure)) {
+            $enclosure = $item->enclosure;
+            if (isset($enclosure['type']) && strpos((string)$enclosure['type'], 'image/') === 0) {
+                return (string)$enclosure['url'];
+            }
+        }
+
+        // 4. Tìm ảnh trong description HTML
+        if (!empty($description)) {
+            $dom = new DOMDocument();
+            @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $description);
+            $images = $dom->getElementsByTagName('img');
+            
+            if ($images->length > 0) {
+                $src = $images->item(0)->getAttribute('src');
+                if (!empty($src)) {
+                    return $src;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Crawl nội dung đầy đủ từ URL bài báo
      */
     private function crawlArticleContent($url)
     {
         try {
-            // Tạo context với user agent
             $context = stream_context_create([
                 'http' => [
                     'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -29,43 +187,30 @@ class AutoNewsController
                 ]
             ]);
 
-            // Lấy HTML
             $html = @file_get_contents($url, false, $context);
             if ($html === false) {
                 error_log("Cannot fetch URL: {$url}");
                 return null;
             }
 
-            // Parse HTML
             $dom = new DOMDocument();
             @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
             $xpath = new DOMXPath($dom);
 
             $content = '';
 
-            // Thử các selector phổ biến cho nội dung bài báo
+            // Các selector phổ biến cho nội dung bài báo
             $selectors = [
-                // Tuổi Trẻ
                 "//div[contains(@class, 'detail-content')]//p",
                 "//div[@id='main-detail-body']//p",
-                
-                // VnExpress
                 "//article[@class='fck_detail']//p",
                 "//div[@class='Normal']//p",
-                
-                // Thanh Niên
                 "//div[@class='details__content']//p",
                 "//div[@id='abody']//p",
-                
-                // Dân Trí
                 "//div[@class='singular-content']//p",
                 "//div[@class='dt-news__content']//p",
-                
-                // Zing News
                 "//div[@class='the-article-body']//p",
                 "//article[@class='article-main']//p",
-                
-                // Generic selectors (dự phòng)
                 "//article//p",
                 "//div[contains(@class, 'content')]//p",
                 "//div[contains(@class, 'article')]//p",
@@ -81,14 +226,12 @@ class AutoNewsController
                     foreach ($paragraphs as $p) {
                         $text = trim($p->textContent);
                         
-                        // Loại bỏ các đoạn quá ngắn hoặc là caption ảnh
                         if (strlen($text) > 50 && 
                             !preg_match('/^(Ảnh|Hình|Nguồn|Video|Xem thêm|Theo|Photo)/i', $text)) {
                             $tempContent[] = $text;
                         }
                     }
                     
-                    // Nếu tìm được ít nhất 3 đoạn văn, coi như thành công
                     if (count($tempContent) >= 3) {
                         $content = implode("\n\n", $tempContent);
                         break;
@@ -96,7 +239,6 @@ class AutoNewsController
                 }
             }
 
-            // Nếu vẫn không tìm được nội dung, thử lấy toàn bộ text
             if (empty($content)) {
                 error_log("Cannot extract content from: {$url}");
                 return null;
@@ -117,10 +259,7 @@ class AutoNewsController
     {
         if (empty($text)) return '';
 
-        // Loại bỏ whitespace thừa
         $text = preg_replace('/\s+/', ' ', $text);
-        
-        // Loại bỏ các dòng quảng cáo phổ biến
         $text = preg_replace('/Theo .+?\n/i', '', $text);
         $text = preg_replace('/Xem thêm:.+?\n/i', '', $text);
         $text = preg_replace('/\[.*?\]/i', '', $text);
@@ -135,11 +274,9 @@ class AutoNewsController
     {
         if (empty($content)) return '';
 
-        // Lấy đoạn đầu tiên
         $paragraphs = explode("\n\n", $content);
         $firstParagraph = $paragraphs[0] ?? '';
 
-        // Cắt ngắn nếu quá dài
         if (mb_strlen($firstParagraph) > $maxLength) {
             $firstParagraph = mb_substr($firstParagraph, 0, $maxLength);
             $lastSpace = mb_strrpos($firstParagraph, ' ');
@@ -236,18 +373,35 @@ class AutoNewsController
                         $counter++;
                     }
 
+                    // Trích xuất và tải ảnh
+                    $featuredImage = null;
+                    echo "  → Đang tìm ảnh...\n";
+                    $imageUrl = $this->extractImageUrl($item, $description);
+                    
+                    if ($imageUrl) {
+                        echo "  → Tìm thấy ảnh: {$imageUrl}\n";
+                        echo "  → Đang tải ảnh...\n";
+                        $featuredImage = $this->downloadImage($imageUrl, $title);
+                        
+                        if ($featuredImage) {
+                            echo "  ✓ Đã lưu ảnh: {$featuredImage}\n";
+                        } else {
+                            echo "  ✗ Không thể tải ảnh\n";
+                        }
+                    } else {
+                        echo "  ✗ Không tìm thấy ảnh trong RSS\n";
+                    }
+
                     // Crawl nội dung đầy đủ từ URL
                     echo "  → Đang crawl nội dung...\n";
                     $fullContent = $this->crawlArticleContent($link);
                     
                     if ($fullContent && strlen($fullContent) > 200) {
-                        // Sử dụng nội dung đã crawl
                         $content = $this->cleanContent($fullContent);
                         $summary = $this->generateSummary($content);
                         
                         echo "  ✓ Đã crawl được " . strlen($content) . " ký tự\n";
                     } else {
-                        // Fallback sang description nếu không crawl được
                         echo "  ✗ Không crawl được, dùng description\n";
                         $content = strip_tags($description);
                         $summary = mb_substr($content, 0, 300);
@@ -265,7 +419,8 @@ class AutoNewsController
                         'updated_at'     => date('Y-m-d H:i:s'),
                         'source_url'     => $link,
                         'source_name'    => $source['name'],
-                        'auto_generated' => 1
+                        'auto_generated' => 1,
+                        'featured_image' => $featuredImage // Thêm ảnh vào đây
                     ]);
 
                     $articlesSaved++;

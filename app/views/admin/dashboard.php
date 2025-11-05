@@ -87,50 +87,6 @@ error_log("Session CSRF: " . ($_SESSION['csrf_token'] ?? 'NOT SET'));
         </div>
     </div>
 
-    <!-- Thống kê lượt xem 7 ngày -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Thống kê lượt xem 7 ngày qua</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Ngày</th>
-                            <th class="text-end">Tổng lượt xem</th>
-                            <th class="text-end">Người dùng duy nhất</th>
-                            <th class="text-end">IP duy nhất</th>
-                            <th class="text-end">Tỷ lệ đăng nhập</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($viewStats as $stat): ?>
-                            <tr>
-                                <td><strong><?= date('d/m/Y', strtotime($stat['date'])) ?></strong></td>
-                                <td class="text-end">
-                                    <span class="badge bg-primary"><?= number_format($stat['view_count']) ?></span>
-                                </td>
-                                <td class="text-end"><?= number_format($stat['unique_users']) ?></td>
-                                <td class="text-end"><?= number_format($stat['unique_ips']) ?></td>
-                                <td class="text-end">
-                                    <?php 
-                                    $rate = $stat['view_count'] > 0 
-                                        ? ($stat['unique_users'] / $stat['view_count']) * 100 
-                                        : 0;
-                                    ?>
-                                    <span class="badge <?= $rate > 50 ? 'bg-success' : 'bg-secondary' ?>">
-                                        <?= number_format($rate, 1) ?>%
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <div class="row g-4">
         <!-- Bài viết mới nhất -->
         <div class="col-lg-6">
