@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title ?? 'Tin tức') ?></title>
+    
+    <!-- Define BASE_URL for JavaScript -->
+    <script>
+        window.BASE_URL = '<?= BASE_URL ?>';
+    </script>
+    <script src="<?= BASE_URL ?>/js/bookmark.js"></script>
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -50,6 +57,14 @@
         }
         .related-articles .card:hover {
             transform: translateY(-5px);
+        }
+        
+        /* Bookmark badge animation */
+        .bookmark-count-badge {
+            transition: all 0.3s ease;
+        }
+        .bookmark-count-badge.updating {
+            transform: scale(1.2);
         }
     </style>
 </head>

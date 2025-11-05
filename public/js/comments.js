@@ -10,8 +10,12 @@ class CommentsSystem {
 
     init() {
         this.articleId = document.querySelector('input[name="article_id"]')?.value;
-        if (!this.articleId) return;
+        if (!this.articleId) {
+            console.error('Article ID not found');
+            return;
+        }
 
+        console.log('Initializing comments system for article:', this.articleId);
         this.bindEvents();
         this.loadComments();
         this.setupCharacterCounter();
@@ -97,12 +101,6 @@ class CommentsSystem {
                 this.hideEditForm(e);
             }
         });
-
-        // Load more button
-        const loadMoreBtn = document.getElementById('load-more-btn');
-        if (loadMoreBtn) {
-            loadMoreBtn.addEventListener('click', () => this.loadMoreComments());
-        }
     }
 
     setupCharacterCounter() {
@@ -130,22 +128,28 @@ class CommentsSystem {
         this.showLoading();
 
         try {
+            console.log('Loading comments for article:', this.articleId);
             const response = await fetch(`${BASE_URL}/comments/get?article_id=${this.articleId}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log('Comments loaded:', data);
 
             if (data.success) {
                 this.comments = data.comments;
                 this.renderComments();
                 this.updateCommentCount();
             } else {
-                this.showError('Không thể tải bình luận: ' + data.error);
+                this.showError('Không thể tải bình luận: ' + (data.error || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error loading comments:', error);
-            this.showError('Có lỗi xảy ra khi tải bình luận');
+            this.showError('Có lỗi xảy ra khi tải bình luận: ' + error.message);
         } finally {
             this.loading = false;
-            this.hideLoading();
         }
     }
 
@@ -168,6 +172,7 @@ class CommentsSystem {
             });
 
             const data = await response.json();
+            console.log('Comment create response:', data);
 
             if (data.success) {
                 // Clear form
@@ -178,17 +183,17 @@ class CommentsSystem {
                 await this.loadComments();
                 
                 // Show success message
-                this.showSuccess(data.message);
+                this.showSuccess(data.message || 'Bình luận đã được thêm thành công');
                 
-                // Scroll to new comment
+                // Scroll to comments section
                 setTimeout(() => {
-                    const newComment = document.querySelector(`[data-comment-id="${data.comment.id}"]`);
-                    if (newComment) {
-                        newComment.scrollIntoView({ behavior: 'smooth' });
-                    }
+                    document.getElementById('comments-container').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
                 }, 100);
             } else {
-                this.showError(data.error);
+                this.showError(data.error || 'Không thể tạo bình luận');
             }
         } catch (error) {
             console.error('Error submitting comment:', error);
@@ -218,15 +223,21 @@ class CommentsSystem {
             const data = await response.json();
 
             if (data.success) {
+                // Reset form
+                form.reset();
+                
                 // Hide reply form
-                this.hideReplyForm(e);
+                const replyContainer = form.closest('.reply-form-container');
+                if (replyContainer) {
+                    replyContainer.style.display = 'none';
+                }
                 
                 // Reload comments
                 await this.loadComments();
                 
-                this.showSuccess(data.message);
+                this.showSuccess(data.message || 'Trả lời đã được thêm thành công');
             } else {
-                this.showError(data.error);
+                this.showError(data.error || 'Không thể gửi trả lời');
             }
         } catch (error) {
             console.error('Error submitting reply:', error);
@@ -256,14 +267,20 @@ class CommentsSystem {
 
             if (data.success) {
                 // Hide edit form
-                this.hideEditForm(e);
+                const editForm = form.closest('.comment-edit-form');
+                const commentText = form.closest('.comment-content').querySelector('.comment-text');
+                
+                if (editForm && commentText) {
+                    editForm.style.display = 'none';
+                    commentText.style.display = 'block';
+                }
                 
                 // Reload comments
                 await this.loadComments();
                 
-                this.showSuccess(data.message);
+                this.showSuccess(data.message || 'Bình luận đã được cập nhật');
             } else {
-                this.showError(data.error);
+                this.showError(data.error || 'Không thể cập nhật bình luận');
             }
         } catch (error) {
             console.error('Error updating comment:', error);
@@ -278,7 +295,7 @@ class CommentsSystem {
         const commentItem = e.target.closest('.comment-item');
         const commentId = commentItem.dataset.commentId;
         
-        if (!confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+        if (!confirm('Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.')) {
             return;
         }
 
@@ -295,15 +312,12 @@ class CommentsSystem {
             const data = await response.json();
 
             if (data.success) {
-                // Remove comment from DOM
-                commentItem.remove();
+                // Reload comments to update UI
+                await this.loadComments();
                 
-                // Update comment count
-                this.updateCommentCount();
-                
-                this.showSuccess(data.message);
+                this.showSuccess(data.message || 'Bình luận đã được xóa');
             } else {
-                this.showError(data.error);
+                this.showError(data.error || 'Không thể xóa bình luận');
             }
         } catch (error) {
             console.error('Error deleting comment:', error);
@@ -350,7 +364,7 @@ class CommentsSystem {
                     dislikeBtn.classList.add('active');
                 }
             } else {
-                this.showError(data.error);
+                this.showError(data.error || 'Có lỗi xảy ra');
             }
         } catch (error) {
             console.error('Error toggling like:', error);
@@ -380,14 +394,16 @@ class CommentsSystem {
             if (data.success) {
                 // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
-                modal.hide();
+                if (modal) {
+                    modal.hide();
+                }
                 
                 // Reset form
                 form.reset();
                 
-                this.showSuccess(data.message);
+                this.showSuccess(data.message || 'Báo cáo đã được gửi thành công');
             } else {
-                this.showError(data.error);
+                this.showError(data.error || 'Không thể gửi báo cáo');
             }
         } catch (error) {
             console.error('Error reporting comment:', error);
@@ -400,7 +416,7 @@ class CommentsSystem {
 
     showReplyForm(e) {
         const commentItem = e.target.closest('.comment-item');
-        const replyContainer = commentItem.querySelector('.reply-form-container');
+        const replyContainer = commentItem.querySelector(':scope > .comment-card > .reply-form-container');
         const authorName = commentItem.querySelector('.author-name').textContent;
         
         // Hide other reply forms
@@ -411,31 +427,41 @@ class CommentsSystem {
         });
         
         // Show this reply form
-        replyContainer.style.display = 'block';
-        replyContainer.querySelector('.reply-to-author').textContent = authorName;
-        replyContainer.querySelector('input[name="parent_id"]').value = commentItem.dataset.commentId;
-        
-        // Focus on textarea
-        const textarea = replyContainer.querySelector('textarea');
-        textarea.focus();
+        if (replyContainer) {
+            replyContainer.style.display = 'block';
+            replyContainer.querySelector('.reply-to-author').textContent = authorName;
+            replyContainer.querySelector('input[name="parent_id"]').value = commentItem.dataset.commentId;
+            
+            // Focus on textarea
+            const textarea = replyContainer.querySelector('textarea');
+            textarea.focus();
+        }
     }
 
     hideReplyForm(e) {
         const replyContainer = e.target.closest('.reply-form-container');
-        replyContainer.style.display = 'none';
-        replyContainer.querySelector('form').reset();
+        if (replyContainer) {
+            replyContainer.style.display = 'none';
+            const form = replyContainer.querySelector('form');
+            if (form) form.reset();
+        }
     }
 
     showEditForm(e) {
         const commentItem = e.target.closest('.comment-item');
-        const commentText = commentItem.querySelector('.comment-text');
-        const editForm = commentItem.querySelector('.comment-edit-form');
+        const commentContent = commentItem.querySelector(':scope > .comment-card > .comment-content');
+        const commentText = commentContent.querySelector('.comment-text');
+        const editForm = commentContent.querySelector('.comment-edit-form');
         const textarea = editForm.querySelector('textarea');
         
         // Hide other edit forms
         document.querySelectorAll('.comment-edit-form').forEach(form => {
             if (form !== editForm) {
                 form.style.display = 'none';
+                const sibling = form.previousElementSibling;
+                if (sibling && sibling.classList.contains('comment-text')) {
+                    sibling.style.display = 'block';
+                }
             }
         });
         
@@ -449,38 +475,48 @@ class CommentsSystem {
         
         // Setup character counter
         const charCount = editForm.querySelector('.edit-char-count');
-        textarea.addEventListener('input', () => {
+        const updateCounter = () => {
             charCount.textContent = textarea.value.length;
-        });
-        charCount.textContent = textarea.value.length;
+        };
+        textarea.addEventListener('input', updateCounter);
+        updateCounter();
         
         textarea.focus();
     }
 
     hideEditForm(e) {
-        const commentItem = e.target.closest('.comment-item');
-        const commentText = commentItem.querySelector('.comment-text');
-        const editForm = commentItem.querySelector('.comment-edit-form');
+        const editForm = e.target.closest('.comment-edit-form');
+        const commentContent = editForm.closest('.comment-content');
+        const commentText = commentContent.querySelector('.comment-text');
         
-        editForm.style.display = 'none';
-        commentText.style.display = 'block';
-        editForm.querySelector('form').reset();
+        if (editForm && commentText) {
+            editForm.style.display = 'none';
+            commentText.style.display = 'block';
+            const form = editForm.querySelector('form');
+            if (form) form.reset();
+        }
     }
 
     showReportModal(e) {
         const commentItem = e.target.closest('.comment-item');
         const commentId = commentItem.dataset.commentId;
         
-        const modal = new bootstrap.Modal(document.getElementById('reportModal'));
-        document.querySelector('#report-form input[name="comment_id"]').value = commentId;
-        modal.show();
+        const modalElement = document.getElementById('reportModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            document.querySelector('#report-form input[name="comment_id"]').value = commentId;
+            modal.show();
+        }
     }
 
     renderComments() {
         const container = document.getElementById('comments-container');
         const template = document.getElementById('comment-template');
         
-        if (!container || !template) return;
+        if (!container || !template) {
+            console.error('Comments container or template not found');
+            return;
+        }
         
         container.innerHTML = '';
         
@@ -489,7 +525,7 @@ class CommentsSystem {
                 <div class="text-center py-5">
                     <div class="empty-state">
                         <i class="bi bi-chat-dots display-1 text-muted mb-3"></i>
-                        <h4>Chưa có bình luận nào</h4>
+                        <h4 class="text-muted">Chưa có bình luận nào</h4>
                         <p class="text-muted">Hãy là người đầu tiên chia sẻ suy nghĩ về bài viết này!</p>
                     </div>
                 </div>
@@ -498,11 +534,12 @@ class CommentsSystem {
         }
         
         this.comments.forEach(comment => {
-            this.renderComment(comment, container, template);
+            const commentElement = this.createCommentElement(comment, template);
+            container.appendChild(commentElement);
         });
     }
 
-    renderComment(comment, container, template) {
+    createCommentElement(comment, template) {
         const clone = template.content.cloneNode(true);
         const commentItem = clone.querySelector('.comment-item');
         
@@ -514,8 +551,8 @@ class CommentsSystem {
         const authorName = clone.querySelector('.author-name');
         const commentDate = clone.querySelector('.comment-date');
         
-        avatarText.textContent = comment.user_name.charAt(0).toUpperCase();
-        authorName.textContent = comment.user_name;
+        avatarText.textContent = comment.user_name ? comment.user_name.charAt(0).toUpperCase() : '?';
+        authorName.textContent = comment.user_name || 'Anonymous';
         commentDate.textContent = this.formatDate(comment.created_at);
         
         // Set comment content
@@ -537,9 +574,11 @@ class CommentsSystem {
             dislikeBtn.classList.add('active');
         }
         
-        // Show edit/delete buttons for comment owner
+        // Show edit/delete buttons for comment owner or admin
         const currentUserId = window.currentUser?.id;
-        if (currentUserId && comment.user_id == currentUserId) {
+        const isAdmin = window.currentUser?.role_id === 1;
+        
+        if (currentUserId && (comment.user_id == currentUserId || isAdmin)) {
             clone.querySelector('.edit-comment-item').style.display = 'block';
             clone.querySelector('.delete-comment-item').style.display = 'block';
         }
@@ -555,17 +594,16 @@ class CommentsSystem {
             const replyCountElement = clone.querySelector('.reply-count');
             replyCountElement.style.display = 'inline';
             replyCountElement.querySelector('.reply-count-text').textContent = replyCount;
-        }
-        
-        container.appendChild(clone);
-        
-        // Render replies
-        if (comment.replies && comment.replies.length > 0) {
-            const repliesContainer = commentItem.querySelector('.replies-list');
+            
+            // Render replies
+            const repliesContainer = clone.querySelector('.replies-list');
             comment.replies.forEach(reply => {
-                this.renderComment(reply, repliesContainer, template);
+                const replyElement = this.createCommentElement(reply, template);
+                repliesContainer.appendChild(replyElement);
             });
         }
+        
+        return clone;
     }
 
     updateCommentCount() {
@@ -600,7 +638,11 @@ class CommentsSystem {
         if (hours < 24) return `${hours} giờ trước`;
         if (days < 7) return `${days} ngày trước`;
         
-        return date.toLocaleDateString('vi-VN');
+        return date.toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
     }
 
     showLoading() {
@@ -617,10 +659,6 @@ class CommentsSystem {
         }
     }
 
-    hideLoading() {
-        // Loading will be replaced by renderComments()
-    }
-
     showSuccess(message) {
         this.showToast(message, 'success');
     }
@@ -634,6 +672,8 @@ class CommentsSystem {
         const toast = document.createElement('div');
         toast.className = `toast align-items-center text-white bg-${type} border-0`;
         toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
         toast.innerHTML = `
             <div class="d-flex">
                 <div class="toast-body">
@@ -649,13 +689,17 @@ class CommentsSystem {
         if (!toastContainer) {
             toastContainer = document.createElement('div');
             toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
             document.body.appendChild(toastContainer);
         }
         
         toastContainer.appendChild(toast);
         
         // Show toast
-        const bsToast = new bootstrap.Toast(toast);
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 3000
+        });
         bsToast.show();
         
         // Remove from DOM after hiding
@@ -667,16 +711,6 @@ class CommentsSystem {
 
 // Initialize comments system when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Set current user info for JavaScript
-    <?php if (\App\Core\Auth::check()): ?>
-    window.currentUser = {
-        id: <?= \App\Core\Auth::user()['id'] ?>,
-        name: '<?= addslashes(\App\Core\Auth::user()['name']) ?>',
-        email: '<?= addslashes(\App\Core\Auth::user()['email']) ?>',
-        role_id: <?= \App\Core\Auth::user()['role_id'] ?>
-    };
-    <?php endif; ?>
-    
-    // Initialize comments system
+    console.log('Initializing Comments System...');
     new CommentsSystem();
 });

@@ -1,276 +1,386 @@
-<h2><?= htmlspecialchars($title) ?></h2>
+<!-- Thêm vào đầu file dashboard.php để debug -->
+<?php 
+error_log("CSRF token in view: " . ($csrf ?? 'NOT SET'));
+error_log("Session CSRF: " . ($_SESSION['csrf_token'] ?? 'NOT SET'));
+?>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><?= htmlspecialchars($title) ?></h2>
+        <div class="btn-group">
+            <a href="<?= BASE_URL ?>/admin/statistics/views" class="btn btn-primary">
+                <i class="bi bi-graph-up"></i> Thống kê chi tiết
+            </a>
+            <a href="<?= BASE_URL ?>/admin/users/create" class="btn btn-success">
+                <i class="bi bi-person-plus"></i> Thêm người dùng
+            </a>
+        </div>
+    </div>
 
-<!-- Thống kê tổng quan -->
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="card text-bg-primary h-100">
-      <div class="card-body">
-        <h5 class="card-title">Bài viết</h5>
-        <div class="display-6"><?= number_format((float)($stats['articles'] ?? 0)) ?></div>
-      </div>
+    <!-- Thống kê tổng quan -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Bài viết</h6>
+                            <h2 class="mb-0"><?= number_format($stats['articles']) ?></h2>
+                        </div>
+                        <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                    <div class="mt-3">
+                        <a href="<?= BASE_URL ?>/admin/articles" class="btn btn-sm btn-light">Quản lý</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-bg-success h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Người dùng</h6>
+                            <h2 class="mb-0"><?= number_format($stats['users']) ?></h2>
+                        </div>
+                        <i class="bi bi-people" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                    <div class="mt-3">
+                        <a href="<?= BASE_URL ?>/admin/users" class="btn btn-sm btn-light">Quản lý</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-bg-warning h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Bình luận</h6>
+                            <h2 class="mb-0"><?= number_format($stats['comments']) ?></h2>
+                        </div>
+                        <i class="bi bi-chat-dots" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                    <div class="mt-3">
+                        <a href="<?= BASE_URL ?>/admin/comments" class="btn btn-sm btn-light">Quản lý</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-bg-info h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Lượt xem</h6>
+                            <h2 class="mb-0"><?= number_format($stats['total_views']) ?></h2>
+                        </div>
+                        <i class="bi bi-eye" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                    <div class="mt-3">
+                        <a href="<?= BASE_URL ?>/admin/statistics/views" class="btn btn-sm btn-light">Chi tiết</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-bg-success h-100">
-      <div class="card-body">
-        <h5 class="card-title">Người dùng</h5>
-        <div class="display-6"><?= number_format((float)($stats['users'] ?? 0)) ?></div>
+
+    <div class="row g-4">
+        <!-- Bài viết mới nhất -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Bài viết mới nhất</h5>
+                    <a href="<?= BASE_URL ?>/admin/articles" class="btn btn-sm btn-primary">Xem tất cả</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tiêu đề</th>
+                                    <th>Tác giả</th>
+                                    <th>Danh mục</th>
+                                    <th class="text-end">Lượt xem</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($latestArticles as $article): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>" target="_blank">
+                                                <?= htmlspecialchars(mb_substr($article['title'], 0, 40)) ?>
+                                                <?= mb_strlen($article['title']) > 40 ? '...' : '' ?>
+                                            </a>
+                                        </td>
+                                        <td><?= htmlspecialchars($article['author_name']) ?></td>
+                                        <td>
+                                            <?php if ($article['category_name']): ?>
+                                                <span class="badge bg-secondary"><?= htmlspecialchars($article['category_name']) ?></span>
+                                            <?php else: ?>
+                                                <span class="text-muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-end"><?= number_format($article['views']) ?></td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="<?= BASE_URL ?>/articles/edit/<?= $article['id'] ?>"
+                                                   class="btn btn-outline-secondary" 
+                                                   title="Sửa">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-outline-danger delete-article-btn" 
+                                                        data-id="<?= $article['id'] ?>"
+                                                        data-title="<?= htmlspecialchars($article['title'], ENT_QUOTES) ?>"
+                                                        title="Xóa">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+<!-- Delete Article Modal -->
+<div class="modal fade" id="deleteArticleModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Xác nhận xóa bài viết</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-bg-warning h-100">
-      <div class="card-body">
-        <h5 class="card-title">Bình luận</h5>
-        <div class="display-6"><?= number_format((float)($stats['comments'] ?? 0)) ?></div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn xóa bài viết <strong id="deleteArticleTitle"></strong>?</p>
+        <p class="text-danger mb-0">
+          <i class="bi bi-exclamation-triangle"></i> 
+          Hành động này không thể hoàn tác!
+        </p>
       </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-bg-info h-100">
-      <div class="card-body">
-        <h5 class="card-title">Lượt xem</h5>
-        <div class="display-6"><?= number_format((float)($stats['total_views'] ?? 0)) ?></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="deleteArticleForm" method="POST" class="d-inline">
+          <input type="hidden" name="csrf" value="<?= $csrf ?>">
+          <button type="submit" class="btn btn-danger">Xóa</button>
+        </form>
       </div>
     </div>
   </div>
 </div>
-
-<div class="row g-4">
-  <!-- Bài viết mới nhất -->
-  <div class="col-md-6">
-    <div class="card h-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Bài viết mới nhất</h5>
-        <a href="<?= BASE_URL ?>/admin/articles" class="btn btn-sm btn-primary">Xem tất cả</a>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead>
-              <tr>
-                <th>Tiêu đề</th>
-                <th>Tác giả</th>
-                <th>Danh mục</th>
-                <th>Ngày tạo</th>
-                <th>Lượt xem</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($latestArticles as $article): ?>
-              <tr>
-                <td><a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>"><?= htmlspecialchars($article['title']) ?></a></td>
-                <td><?= htmlspecialchars($article['author_name']) ?></td>
-                <td><?= htmlspecialchars($article['category_name'] ?? 'Chưa phân loại') ?></td>
-                <td><?= date('d/m/Y H:i', strtotime($article['created_at'])) ?></td>
-                <td><?= number_format((float)($article['views'] ?? 0)) ?></td>
-              </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
+        <!-- Người dùng mới -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Người dùng mới</h5>
+                    <a href="<?= BASE_URL ?>/admin/users" class="btn btn-sm btn-success">Xem tất cả</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tên</th>
+                                    <th>Email</th>
+                                    <th>Vai trò</th>
+                                    <th class="text-end">Bài viết</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($latestUsers as $user): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($user['name']) ?></td>
+                                        <td><?= htmlspecialchars($user['email']) ?></td>
+                                        <td>
+                                            <span class="badge <?= $user['role_id'] === 1 ? 'bg-danger' : 'bg-primary' ?>">
+                                                <?= htmlspecialchars($user['role_name']) ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-end"><?= number_format($user['article_count']) ?></td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="<?= BASE_URL ?>/admin/users/<?= $user['id'] ?>" 
+                                                   class="btn btn-outline-primary"
+                                                   title="Chi tiết">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-outline-danger delete-user-btn" 
+                                                        data-id="<?= $user['id'] ?>"
+                                                        data-name="<?= htmlspecialchars($user['name'], ENT_QUOTES) ?>"
+                                                        title="Xóa"
+                                                        <?= $user['role_id'] === 3 ? 'disabled' : '' ?>>
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Người dùng mới -->
-  <div class="col-md-6">
-    <div class="card h-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Người dùng mới</h5>
-        <a href="<?= BASE_URL ?>/admin/users" class="btn btn-sm btn-primary">Xem tất cả</a>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead>
-              <tr>
-                <th>Tên</th>
-                <th>Email</th>
-                <th>Vai trò</th>
-                <th>Số bài viết</th>
-                <th>Ngày tham gia</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($latestUsers as $user): ?>
-              <tr>
-                <td><?= htmlspecialchars($user['name']) ?></td>
-                <td><?= htmlspecialchars($user['email']) ?></td>
-                <td><span class="badge <?= $user['role_id'] === 1 ? 'bg-danger' : 'bg-primary' ?>"><?= htmlspecialchars($user['role_name']) ?></span></td>
-                <td><?= number_format((float)($user['article_count'] ?? 0)) ?></td>
-                <td><?= date('d/m/Y H:i', strtotime($user['created_at'])) ?></td>
-              </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Thống kê theo danh mục -->
-  <div class="col-md-6">
-    <div class="card h-100">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Thống kê theo danh mục</h5>
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Xác nhận xóa người dùng</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Danh mục</th>
-                <th>Số bài viết</th>
-                <th>Tổng lượt xem</th>
-                <th>Trung bình</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($categoryStats as $cat): ?>
-              <tr>
-                <td><?= htmlspecialchars($cat['name']) ?></td>
-                <td><?= number_format((float)($cat['article_count'] ?? 0)) ?></td>
-                <td><?= number_format((float)($cat['total_views'] ?? 0)) ?></td>
-                <td><?php $ac = (int)($cat['article_count'] ?? 0); $tv = (float)($cat['total_views'] ?? 0); echo $ac > 0 ? number_format($tv / $ac, 1) : 0; ?></td>
-              </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn xóa người dùng <strong id="deleteUserName"></strong>?</p>
+        <p class="text-danger mb-0">
+          <i class="bi bi-exclamation-triangle"></i> 
+          Hành động này không thể hoàn tác!
+        </p>
       </div>
-    </div>
-  </div>
-
-  <!-- Bài viết xem nhiều nhất -->
-  <div class="col-md-6">
-    <div class="card h-100">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Bài viết xem nhiều nhất</h5>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Tiêu đề</th>
-                <th>Tác giả</th>
-                <th>Danh mục</th>
-                <th>Lượt xem</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($popularArticles as $article): ?>
-              <tr>
-                <td><a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>"><?= htmlspecialchars($article['title']) ?></a></td>
-                <td><?= htmlspecialchars($article['author_name']) ?></td>
-                <td><?= htmlspecialchars($article['category_name'] ?? 'Chưa phân loại') ?></td>
-                <td><?= number_format((float)($article['views'] ?? 0)) ?></td>
-              </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="deleteUserForm" method="POST" class="d-inline">
+          <input type="hidden" name="csrf" value="<?= $csrf ?>">
+          <button type="submit" class="btn btn-danger">Xóa</button>
+        </form>
       </div>
     </div>
   </div>
 </div>
+        <!-- Thống kê theo danh mục -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-folder"></i> Thống kê theo danh mục</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Danh mục</th>
+                                    <th class="text-end">Bài viết</th>
+                                    <th class="text-end">Lượt xem</th>
+                                    <th class="text-end">TB/bài</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($categoryStats as $cat): ?>
+                                    <tr>
+                                        <td><strong><?= htmlspecialchars($cat['name']) ?></strong></td>
+                                        <td class="text-end"><?= number_format($cat['article_count']) ?></td>
+                                        <td class="text-end"><?= number_format($cat['total_views']) ?></td>
+                                        <td class="text-end">
+                                            <?php 
+                                            $avg = $cat['article_count'] > 0 
+                                                ? $cat['total_views'] / $cat['article_count'] 
+                                                : 0;
+                                            echo number_format($avg, 1);
+                                            ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bài viết xem nhiều nhất -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-fire"></i> Bài viết phổ biến nhất</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tiêu đề</th>
+                                    <th>Tác giả</th>
+                                    <th class="text-end">Lượt xem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($popularArticles as $article): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="<?= BASE_URL ?>/article/<?= urlencode($article['slug']) ?>" target="_blank">
+                                                <?= htmlspecialchars(mb_substr($article['title'], 0, 50)) ?>
+                                            </a>
+                                        </td>
+                                        <td><?= htmlspecialchars($article['author_name']) ?></td>
+                                        <td class="text-end">
+                                            <strong class="text-primary"><?= number_format($article['views']) ?></strong>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+</style>
 
 <script>
-// Thêm đoạn mã JavaScript để tự động làm mới dữ liệu mỗi 5 phút
-setTimeout(function() {
-    location.reload();
-}, 300000);
+document.addEventListener('DOMContentLoaded', function() {
+    // Xóa bài viết
+    document.querySelectorAll('.delete-article-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const title = this.getAttribute('data-title');
+            
+            document.getElementById('deleteArticleTitle').textContent = title;
+            document.getElementById('deleteArticleForm').action = '<?= BASE_URL ?>/admin/articles/' + id + '/delete';
+            
+            new bootstrap.Modal(document.getElementById('deleteArticleModal')).show();
+        });
+    });
+    
+    // Xóa người dùng
+    document.querySelectorAll('.delete-user-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.getAttribute('data-name');
+            
+            document.getElementById('deleteUserName').textContent = name;
+            document.getElementById('deleteUserForm').action = '<?= BASE_URL ?>/admin/users/' + id + '/delete';
+            
+            new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+        });
+    });
+});
 </script>
-
-<!-- Thống kê lượt xem -->
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Thống kê lượt xem 7 ngày qua</h5>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Ngày</th>
-                <th>Tổng lượt xem</th>
-                <th>Người dùng đã đăng nhập</th>
-                <th>Số IP duy nhất</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($viewStats as $stat): ?>
-              <tr>
-                <td><?= date('d/m/Y', strtotime($stat['date'])) ?></td>
-                <td><?= number_format((float)($stat['view_count'] ?? 0)) ?></td>
-                <td><?= number_format((float)($stat['unique_users'] ?? 0)) ?></td>
-                <td><?= number_format((float)($stat['unique_ips'] ?? 0)) ?></td>
-              </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Hoạt động gần đây -->
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Hoạt động người dùng gần đây</h5>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Thời gian</th>
-                <th>Người dùng</th>
-                <th>Hoạt động</th>
-                <th>Chi tiết</th>
-                <th>IP</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($recentActivities as $activity): ?>
-              <tr>
-                <td><?= date('d/m/Y H:i:s', strtotime($activity['created_at'])) ?></td>
-                <td><?= htmlspecialchars($activity['user_name']) ?></td>
-                <td>
-                  <?php
-                    $types = [
-                      'login' => 'Đăng nhập',
-                      'logout' => 'Đăng xuất',
-                      'article_view' => 'Xem bài viết',
-                      'article_create' => 'Tạo bài viết',
-                      'article_edit' => 'Sửa bài viết',
-                      'article_delete' => 'Xóa bài viết',
-                      'comment_create' => 'Bình luận',
-                      'comment_delete' => 'Xóa bình luận'
-                    ];
-                    echo $types[$activity['activity_type']] ?? $activity['activity_type'];
-                  ?>
-                </td>
-                <td>
-                  <?php if ($activity['article_title']): ?>
-                    <?= htmlspecialchars($activity['article_title']) ?>
-                  <?php endif; ?>
-                </td>
-                <td><?= htmlspecialchars($activity['ip_address']) ?></td>
-              </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-

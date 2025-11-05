@@ -85,8 +85,9 @@ class Comment extends Model
     public function create(array $data): int
     {
         $stmt = $this->db->prepare('
-            INSERT INTO comments (article_id, user_id, parent_id, content, status) 
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO comments 
+            (article_id, user_id, parent_id, content, status, created_at, likes, dislikes) 
+            VALUES (?, ?, ?, ?, ?, NOW(), 0, 0)
         ');
         
         $stmt->execute([
@@ -99,6 +100,7 @@ class Comment extends Model
         
         return (int)$this->db->lastInsertId();
     }
+
 
     /**
      * Find comment by ID

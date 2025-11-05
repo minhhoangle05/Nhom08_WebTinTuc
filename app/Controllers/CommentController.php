@@ -24,15 +24,16 @@ class CommentController extends Controller
      * Get comments for an article (AJAX)
      */
     public function getComments(): void
-    {
-        $articleId = (int)($_GET['article_id'] ?? 0);
-        
-        if (!$articleId) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Article ID is required']);
-            return;
-        }
+{
+    $articleId = (int)($_GET['article_id'] ?? 0);
+    
+    if (!$articleId) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Article ID is required']);
+        return;
+    }
 
+    try {
         $comments = $this->commentModel->getByArticle($articleId);
         
         header('Content-Type: application/json');
@@ -40,88 +41,62 @@ class CommentController extends Controller
             'success' => true,
             'comments' => $comments
         ]);
+    } catch (\Exception $e) {
+        error_log("Error loading comments: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Không thể tải bình luận']);
     }
+}
 
     /**
      * Create a new comment
      */
     public function create(): void
     {
-        if (!Auth::check()) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Bạn cần đăng nhập để bình luận']);
-            return;
-        }
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            // Nhận dữ liệu từ request
+            $articleId = (int)($_POST['article_id'] ?? 0);
+            $userId = Auth::check() ? Auth::user()['id'] : 0;
+            $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+            $content = trim($_POST['content'] ?? '');
 
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Phiên làm việc đã hết hạn']);
-            return;
-        }
-
-        $articleId = (int)($_POST['article_id'] ?? 0);
-        $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
-        $content = trim($_POST['content'] ?? '');
-
-        if (!$articleId || empty($content)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Thông tin không đầy đủ']);
-            return;
-        }
-
-        if (strlen($content) < 3) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Bình luận phải có ít nhất 3 ký tự']);
-            return;
-        }
-
-        if (strlen($content) > 1000) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Bình luận không được quá 1000 ký tự']);
-            return;
-        }
-
-        // Check if parent comment exists and belongs to same article
-        if ($parentId) {
-            $parentComment = $this->commentModel->findById($parentId);
-            if (!$parentComment || $parentComment['article_id'] != $articleId) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Bình luận cha không hợp lệ']);
+            // Kiểm tra dữ liệu
+            if ($articleId <= 0 || $userId <= 0 || $content === '') {
+                echo json_encode(['error' => 'Dữ liệu không hợp lệ.']);
                 return;
             }
-        }
 
-        $commentData = [
-            'article_id' => $articleId,
-            'user_id' => Auth::user()['id'],
-            'parent_id' => $parentId,
-            'content' => $content,
-            'status' => 'approved' // Auto-approve for now, can be changed to 'pending' for moderation
-        ];
+            // Chuẩn bị dữ liệu cho model
+            $data = [
+                'article_id' => $articleId,
+                'user_id' => $userId,
+                'parent_id' => $parentId,
+                'content' => htmlspecialchars($content),
+                'status' => 'approved'
+            ];
 
-        try {
-            $commentId = $this->commentModel->create($commentData);
-            
-            if ($commentId) {
-                ActivityLogger::log('comment_create', $commentId);
-                
-                // Get the created comment with user info
-                $comment = $this->commentModel->findByIdWithUser($commentId);
-                
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Bình luận đã được thêm thành công',
-                    'comment' => $comment
-                ]);
-            } else {
-                throw new \Exception('Không thể tạo bình luận');
-            }
-            
+            // Gọi model để thêm bình luận
+            $commentId = $this->commentModel->create($data);
+
+            // Ghi log
+            ActivityLogger::log('comment_create', $commentId);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Bình luận đã được gửi thành công.',
+                'comment_id' => $commentId
+            ]);
         } catch (\Exception $e) {
-            error_log("Error creating comment: " . $e->getMessage());
+            // Ghi lỗi chi tiết vào file log
+            error_log('Error creating comment: ' . $e->getMessage());
+
             http_response_code(500);
-            echo json_encode(['error' => 'Có lỗi xảy ra khi tạo bình luận']);
+            echo json_encode([
+                'error' => 'Có lỗi xảy ra khi bình luận.',
+                'debug' => $e->getMessage() // chỉ nên bật khi debug
+            ]);
         }
     }
 
@@ -255,49 +230,34 @@ class CommentController extends Controller
      */
     public function toggleLike(): void
     {
+        header('Content-Type: application/json');
+
         if (!Auth::check()) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Bạn cần đăng nhập']);
+            echo json_encode(['success' => false, 'error' => 'Bạn cần đăng nhập để thực hiện hành động này']);
             return;
         }
 
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Phiên làm việc đã hết hạn']);
-            return;
-        }
-
-        $commentId = (int)($_POST['comment_id'] ?? 0);
-        $action = $_POST['action'] ?? ''; // 'like' or 'dislike'
+        $commentId = $_POST['comment_id'] ?? null;
+        $action = $_POST['action'] ?? null;
+        $userId = Auth::user()['id'];
 
         if (!$commentId || !in_array($action, ['like', 'dislike'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Thông tin không hợp lệ']);
-            return;
-        }
-
-        $comment = $this->commentModel->findById($commentId);
-        if (!$comment) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Bình luận không tồn tại']);
+            echo json_encode(['success' => false, 'error' => 'Dữ liệu không hợp lệ']);
             return;
         }
 
         try {
-            $result = $this->commentModel->toggleLike($commentId, Auth::user()['id'], $action);
-            
-            header('Content-Type: application/json');
+            $commentModel = new Comment();
+            $result = $commentModel->toggleLike((int)$commentId, (int)$userId, $action);
+
             echo json_encode([
                 'success' => true,
                 'action' => $result['action'],
                 'likes' => $result['likes'],
                 'dislikes' => $result['dislikes']
             ]);
-            
         } catch (\Exception $e) {
-            error_log("Error toggling like: " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['error' => 'Có lỗi xảy ra']);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
 

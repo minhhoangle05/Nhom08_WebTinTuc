@@ -1,6 +1,7 @@
 <?php
 namespace App\Core;
 
+require_once CONFIG_PATH . '/config.php';
 use PDO;
 use PDOException;
 

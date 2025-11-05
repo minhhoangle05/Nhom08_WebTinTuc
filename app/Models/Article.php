@@ -85,6 +85,39 @@ class Article extends Model
             throw new \Exception('Không thể tạo bài viết. Vui lòng thử lại sau.');
         }
     }
+    public function insertArticle($data)
+{
+    $stmt = $this->db->prepare("
+        INSERT INTO articles (
+            user_id, title, summary, slug, content,
+            views, created_at, updated_at, source_url, source_name,featured_image,
+            auto_generated
+        )
+        VALUES (
+            :user_id, :title, :summary,:slug, :content,
+            :views, :created_at, :updated_at, :source_url, :source_name, :featured_image,
+            :auto_generated
+        )
+    ");
+
+    $stmt->execute([
+        ':user_id'        => $data['user_id'],
+        ':title'          => $data['title'],
+        ':summary'        => $data['summary'],
+        ':slug'           => $data['slug'],
+        ':content'        => $data['content'],
+        ':views'          => $data['views'],
+        ':created_at'     => $data['created_at'],
+        ':updated_at'     => $data['updated_at'],
+        ':source_url'     => $data['source_url'],
+        ':source_name'    => $data['source_name'],
+        ':featured_image' => $data['featured_image'],
+        ':auto_generated' => $data['auto_generated'],
+    ]);
+}
+
+
+
 
     protected function buildBaseQuery(): string
     {
@@ -156,6 +189,7 @@ class Article extends Model
      */
     public function search(array $params = [], int $limit = 10, int $offset = 0): array
     {
+        error_log("Article::search called with limit=$limit, offset=$offset");
         error_log("Starting article search with params: " . print_r($params, true));
         
         $conditions = $this->buildSearchConditions($params);
@@ -255,17 +289,6 @@ class Article extends Model
         return $this->search([
             'category_slug' => $categorySlug
         ], $limit, $offset);
-    }
-
-    /**
-     * Count articles by category
-     */
-    public function countByCategory(int $categoryId): int
-    {
-        return $this->countSearch([
-            'category_id' => $categoryId,
-            'status' => self::STATUS_PUBLISHED
-        ]);
     }
 
     /**
@@ -381,16 +404,6 @@ class Article extends Model
             error_log("Error finding related articles: " . $e->getMessage());
             return [];
         }
-    }
-
-    /**
-     * Get recent articles by user
-     */
-    public function getByUser(int $userId, int $limit = 10, int $offset = 0): array
-    {
-        return $this->search([
-            'user_id' => $userId
-        ], $limit, $offset);
     }
 
     /**
@@ -543,5 +556,35 @@ class Article extends Model
             $stmt->execute([$slug]);
         }
         return $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Get articles by user
+     */
+    public function getByUser(int $userId, int $limit = 10): array
+    {
+        $stmt = $this->db->prepare('
+            SELECT a.*, 
+                   u.name as author_name,
+                   c.name as category_name,
+                   (SELECT COUNT(*) FROM comments WHERE article_id = a.id) as comment_count
+            FROM articles a
+            LEFT JOIN users u ON a.user_id = u.id
+            LEFT JOIN categories c ON a.category_id = c.id
+            WHERE a.user_id = ?
+            ORDER BY a.created_at DESC
+            LIMIT ?
+        ');
+        $stmt->execute([$userId, $limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    /**
+     * Count articles by category
+     */
+    public function countByCategory(int $categoryId): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM articles WHERE category_id = ?');
+        $stmt->execute([$categoryId]);
+        return (int)$stmt->fetchColumn();
     }
 }

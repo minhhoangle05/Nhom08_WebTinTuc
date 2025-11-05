@@ -69,12 +69,16 @@
             <tr>
               <th>Trạng thái:</th>
               <td>
-                <?php if ($article['status'] === 'published'): ?>
-                  <span class="badge bg-success">Đã xuất bản</span>
-                <?php elseif ($article['status'] === 'draft'): ?>
-                  <span class="badge bg-secondary">Bản nháp</span>
+                <?php if (isset($article['status'])): ?>
+                  <?php if ($article['status'] === 'published'): ?>
+                    <span class="badge bg-success">Đã xuất bản</span>
+                  <?php elseif ($article['status'] === 'draft'): ?>
+                    <span class="badge bg-secondary">Bản nháp</span>
+                  <?php else: ?>
+                    <span class="badge bg-warning"><?= htmlspecialchars($article['status']) ?></span>
+                  <?php endif; ?>
                 <?php else: ?>
-                  <span class="badge bg-warning"><?= htmlspecialchars($article['status']) ?></span>
+                  <span class="badge bg-success">Đã xuất bản</span>
                 <?php endif; ?>
               </td>
             </tr>
@@ -103,6 +107,21 @@
       </div>
     </div>
 
+    <!-- Ảnh đại diện -->
+    <?php if (!empty($article['featured_image'])): ?>
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Ảnh đại diện</h5>
+      </div>
+      <div class="card-body">
+        <img src="<?= BASE_URL ?>/uploads/articles/<?= htmlspecialchars($article['featured_image']) ?>" 
+             alt="<?= htmlspecialchars($article['title']) ?>"
+             class="img-fluid rounded"
+             style="max-height: 400px; object-fit: cover;">
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Nội dung -->
     <div class="card">
       <div class="card-header">
@@ -110,7 +129,7 @@
       </div>
       <div class="card-body">
         <div class="content-preview">
-          <?= nl2br(htmlspecialchars($article['content'])) ?>
+          <?= $article['content'] ?>
         </div>
       </div>
     </div>
@@ -141,6 +160,18 @@
       </div>
     </div>
 
+    <!-- Tóm tắt -->
+    <?php if (!empty($article['summary'])): ?>
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Tóm tắt</h5>
+      </div>
+      <div class="card-body">
+        <p class="mb-0"><?= htmlspecialchars($article['summary']) ?></p>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Lịch sử lượt xem -->
     <div class="card">
       <div class="card-header">
@@ -168,8 +199,13 @@
               </tbody>
             </table>
           </div>
+          <?php if (count($viewHistory) > 10): ?>
+          <div class="text-center mt-2">
+            <small class="text-muted">Hiển thị 10/<?= count($viewHistory) ?> ngày</small>
+          </div>
+          <?php endif; ?>
         <?php else: ?>
-          <p class="text-muted text-center mb-0">Chưa có dữ liệu</p>
+          <p class="text-muted text-center mb-0">Chưa có dữ liệu lượt xem</p>
         <?php endif; ?>
       </div>
     </div>
@@ -209,9 +245,73 @@ function deleteArticle(id, title) {
 
 <style>
 .content-preview {
-  max-height: 500px;
+  max-height: 600px;
   overflow-y: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  line-height: 1.8;
+  font-size: 1rem;
+}
+
+.content-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.content-preview p {
+  margin-bottom: 1rem;
+}
+
+.content-preview h1,
+.content-preview h2,
+.content-preview h3,
+.content-preview h4,
+.content-preview h5,
+.content-preview h6 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.content-preview ul,
+.content-preview ol {
+  margin-bottom: 1rem;
+  padding-left: 2rem;
+}
+
+.content-preview blockquote {
+  border-left: 4px solid var(--bs-primary);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--bs-secondary);
+  font-style: italic;
+}
+
+.content-preview code {
+  background: var(--bs-gray-200);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.content-preview pre {
+  background: var(--bs-gray-100);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.content-preview pre code {
+  background: none;
+  padding: 0;
+}
+
+[data-bs-theme="dark"] .content-preview code {
+  background: var(--bs-gray-800);
+}
+
+[data-bs-theme="dark"] .content-preview pre {
+  background: var(--bs-gray-900);
 }
 </style>

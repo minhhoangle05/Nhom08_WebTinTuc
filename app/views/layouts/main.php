@@ -54,6 +54,11 @@ if (!isset($content)) {
             <?php endif; ?>
           </ul>
         </li>
+        <li class="nav-item">
+  <a class="nav-link" href="<?= BASE_URL ?>/bookmarks">
+    <i class="bi bi-bookmark-heart-fill me-1"></i>Yêu thích
+  </a>
+</li>
       </ul>
       <form class="d-flex align-items-center me-3" role="search" action="<?= BASE_URL ?>/articles/search" method="get" style="gap:8px">
         <div class="input-group rounded-pill overflow-hidden" style="border:1px solid var(--bs-border-color);">
@@ -77,6 +82,9 @@ if (!isset($content)) {
             <ul class="dropdown-menu dropdown-menu-end">
               <li><a class="dropdown-item" href="<?= BASE_URL ?>/account/profile"><i class="bi bi-person me-2"></i>Thông tin cá nhân</a></li>
               <li><a class="dropdown-item" href="<?= BASE_URL ?>/articles/mine"><i class="bi bi-journals me-2"></i>Bài viết của tôi</a></li>
+              <li><a class="dropdown-item" href="<?= BASE_URL ?>/bookmarks">
+  <i class="bi bi-bookmark-heart me-2"></i>Yêu thích
+</a></li>
               <?php if (\App\Core\Auth::user()['role_id'] === 3): ?>
                 <li><a class="dropdown-item" href="<?= BASE_URL ?>/admin/dashboard"><i class="bi bi-speedometer me-2"></i>Quản trị</a></li>
               <?php endif; ?>

@@ -41,10 +41,16 @@ Session::start();
 
 $router = new Router();
 
-// Web routes
+// ========================================
+// PUBLIC ROUTES
+// ========================================
+
+// Home
 $router->get('/', 'HomeController@index');
 
-// Authentication routes
+// ========================================
+// AUTHENTICATION ROUTES
+// ========================================
 $router->get('/auth/login', 'AuthController@login');
 $router->post('/auth/login', 'AuthController@doLogin');
 $router->get('/auth/register', 'AuthController@register');
@@ -55,47 +61,47 @@ $router->post('/auth/forgot-password', 'AuthController@processForgotPassword');
 $router->get('/auth/reset-password/:token', 'AuthController@resetPassword');
 $router->post('/auth/reset-password', 'AuthController@processResetPassword');
 
-// Trang chủ bài viết
+// Danh sách bài viết yêu thích (cần đăng nhập)
+$router->get('/bookmarks', 'BookmarkController@index');
+$router->post('/bookmarks/toggle', 'BookmarkController@toggle');
+$router->post('/bookmarks/add', 'BookmarkController@add');
+$router->post('/bookmarks/remove', 'BookmarkController@remove');
+$router->get('/bookmarks/check', 'BookmarkController@check');
+
+// ========================================
+// ARTICLE ROUTES
+// ========================================
+
+// Article browsing
 $router->get('/articles', 'ArticleController@index');
 $router->get('/articles/search', 'ArticleController@search');
+$router->get('/article/:slug', 'ArticleController@show');
+
+// My articles (user's own articles)
 $router->get('/articles/mine', 'ArticleController@myArticles');
 
-// Quản lý bài viết
+// Article creation & editing
 $router->get('/articles/create', 'ArticleController@create');
 $router->post('/articles', 'ArticleController@store');
-$router->get('/article/:slug', 'ArticleController@show');
-$router->get('/article/:id/edit', 'ArticleController@edit');
-$router->put('/article/:id', 'ArticleController@update');
-$router->delete('/article/:id', 'ArticleController@delete');
-$router->post('/article/:id/delete', 'ArticleController@delete');
+$router->get('/articles/edit/:id', 'ArticleController@edit');
+$router->post('/articles/:id/update', 'ArticleController@update');
+$router->post('/articles/:id/delete', 'ArticleController@delete');
 
-// Preview và bản nháp
-$router->get('/article/preview/:id', 'ArticleController@preview');
+// Draft management
 $router->get('/articles/drafts', 'ArticleController@drafts');
-$router->get('/article/draft/:id', 'ArticleController@editDraft');
-$router->put('/article/draft/:id', 'ArticleController@updateDraft');
-$router->delete('/article/draft/:id', 'ArticleController@deleteDraft');
+$router->get('/articles/draft/:id', 'ArticleController@editDraft');
+$router->post('/articles/draft/:id/update', 'ArticleController@updateDraft');
+$router->post('/articles/draft/:id/delete', 'ArticleController@deleteDraft');
+$router->get('/articles/preview/:id', 'ArticleController@preview');
 
-// Quản lý trạng thái
-$router->post('/article/:id/publish', 'ArticleController@publish');
-$router->post('/article/:id/unpublish', 'ArticleController@unpublish');
-$router->post('/article/:id/save-draft', 'ArticleController@saveDraft');
+// Article status management
+$router->post('/articles/:id/publish', 'ArticleController@publish');
+$router->post('/articles/:id/unpublish', 'ArticleController@unpublish');
+$router->post('/articles/:id/save-draft', 'ArticleController@saveDraft');
 
-
-
-// Admin routes
-$router->get('/admin/dashboard', 'AdminController@index');
-$router->get('/admin', 'AdminController@index'); // Redirect from /admin to /admin/dashboard
-$router->get('/admin/comments', 'AdminController@commentsModerationPage');
-$router->get('/admin/comments/moderation', 'AdminController@commentsModeration');
-$router->get('/admin/comments/reports', 'AdminController@commentsReports');
-$router->post('/admin/comments/resolve-report', 'AdminController@resolveReport');
-
-// Account / Profile
-$router->get('/account/profile', 'ProfileController@show');
-$router->post('/account/profile', 'ProfileController@update');
-
-// Comments routes
+// ========================================
+// COMMENT ROUTES
+// ========================================
 $router->get('/comments/get', 'CommentController@getComments');
 $router->post('/comments/create', 'CommentController@create');
 $router->post('/comments/update', 'CommentController@update');
@@ -104,7 +110,71 @@ $router->post('/comments/toggle-like', 'CommentController@toggleLike');
 $router->post('/comments/report', 'CommentController@report');
 $router->post('/comments/moderate', 'CommentController@moderate');
 
-// Dispatch request
+// ========================================
+// USER PROFILE ROUTES
+// ========================================
+$router->get('/account/profile', 'ProfileController@show');
+$router->post('/account/profile', 'ProfileController@update');
+
+// ========================================
+// ADMIN ROUTES
+// ========================================
+
+// Admin Dashboard
+$router->get('/admin', 'AdminController@index');
+$router->get('/admin/dashboard', 'AdminController@index');
+
+// Admin - Articles Management
+$router->get('/admin/articles', 'AdminController@articles');
+$router->get('/admin/articles/:id', 'AdminController@articleDetail');
+$router->post('/admin/articles/:id/delete', 'AdminController@deleteArticle');
+
+
+// Admin - Categories Management
+$router->get('/admin/categories', 'AdminController@categories');
+$router->post('/admin/categories/create', 'AdminController@createCategory');
+$router->post('/admin/categories/:id/update', 'AdminController@updateCategory');
+$router->post('/admin/categories/:id/delete', 'AdminController@deleteCategory');
+
+// Admin - Tags Management
+$router->get('/admin/tags', 'AdminController@tags');
+$router->post('/admin/tags/create', 'AdminController@createTag');
+$router->post('/admin/tags/:id/update', 'AdminController@updateTag');
+$router->post('/admin/tags/:id/delete', 'AdminController@deleteTag');
+
+// Admin - Comments Management
+// Trang quản lý comment (UI)
+$router->get('/admin/comments', 'AdminController@comments');
+// API endpoints cho comment moderation
+$router->get('/admin/comments/moderation', 'AdminController@commentsModeration');
+$router->get('/admin/comments/reports', 'AdminController@commentsReports');
+$router->post('/admin/comments/resolve-report', 'AdminController@resolveReport');
+$router->post('/admin/comments/:id/delete', 'AdminController@deleteComment');
+
+
+
+// Admin - Statistics
+$router->get('/admin/statistics', 'AdminController@statistics');
+$router->get('/admin/statistics/views', 'AdminController@viewStatistics');
+$router->get('/admin/statistics/articles', 'AdminController@articleStatistics');
+$router->get('/admin/statistics/users', 'AdminController@userStatistics');
+
+// Admin - Users Management
+$router->get('/admin/users', 'AdminController@users');
+$router->get('/admin/users/create', 'AdminController@createUserPage');
+$router->post('/admin/users/create', 'AdminController@createUser');
+$router->get('/admin/users/:id', 'AdminController@userDetail');
+$router->get('/admin/users/:id/edit', 'AdminController@editUserPage');
+$router->post('/admin/users/:id/update', 'AdminController@updateUser');
+$router->post('/admin/users/:id/delete', 'AdminController@deleteUser');
+// ========================================
+// API ROUTES
+// ========================================
+$router->post('/api/summarize', 'ApiController@summarize');
+$router->post('/api/summarize-local', 'ApiController@summarizeLocal');
+// ========================================
+// DISPATCH REQUEST
+// ========================================
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 
 

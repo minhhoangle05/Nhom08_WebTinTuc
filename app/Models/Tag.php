@@ -57,35 +57,6 @@ class Tag extends Model
     }
 
     /**
-     * Get tags with article count
-     */
-    public function withArticleCount(): array
-    {
-        $stmt = $this->db->query('
-            SELECT t.*, COUNT(at.article_id) as article_count
-            FROM tags t
-            LEFT JOIN article_tags at ON t.id = at.tag_id
-            LEFT JOIN articles a ON at.article_id = a.id AND a.status = "published"
-            GROUP BY t.id
-            ORDER BY t.name
-        ');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Create a new tag
-     */
-    public function create(array $data): int
-    {
-        $stmt = $this->db->prepare('INSERT INTO tags (name, slug) VALUES (?, ?)');
-        $stmt->execute([
-            $data['name'],
-            $data['slug']
-        ]);
-        return (int)$this->db->lastInsertId();
-    }
-
-    /**
      * Update a tag
      */
     public function update(int $id, array $data): bool
@@ -96,20 +67,6 @@ class Tag extends Model
             $data['slug'],
             $id
         ]);
-    }
-
-    /**
-     * Delete a tag
-     */
-    public function delete(int $id): bool
-    {
-        // First delete all article_tag relationships
-        $stmt = $this->db->prepare('DELETE FROM article_tags WHERE tag_id = ?');
-        $stmt->execute([$id]);
-        
-        // Then delete the tag
-        $stmt = $this->db->prepare('DELETE FROM tags WHERE id = ?');
-        return $stmt->execute([$id]);
     }
 
     /**
@@ -138,5 +95,43 @@ class Tag extends Model
         $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
         $slug = preg_replace('/-+/', '-', $slug);
         return trim($slug, '-');
+    }
+    /**
+     * Get all tags with article count
+     */
+    public function withArticleCount(): array
+    {
+        $stmt = $this->db->query('
+            SELECT t.*, COUNT(at.article_id) as article_count
+            FROM tags t
+            LEFT JOIN article_tags at ON t.id = at.tag_id
+            GROUP BY t.id
+            ORDER BY t.name
+        ');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Create a new tag
+     */
+    public function create(array $data): int
+    {
+        $stmt = $this->db->prepare('INSERT INTO tags (name, slug) VALUES (?, ?)');
+        $stmt->execute([$data['name'], $data['slug']]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    /**
+     * Delete a tag
+     */
+    public function delete(int $id): bool
+    {
+        // First delete all article_tag relationships
+        $stmt = $this->db->prepare('DELETE FROM article_tags WHERE tag_id = ?');
+        $stmt->execute([$id]);
+        
+        // Then delete the tag
+        $stmt = $this->db->prepare('DELETE FROM tags WHERE id = ?');
+        return $stmt->execute([$id]);
     }
 }
