@@ -418,37 +418,65 @@ class Article extends Model
      * Update an existing article
      */
     public function update(int $id, array $data): bool
-    {
-        $sets = [];
-        $params = [];
-
-        $fields = ['title', 'slug', 'content', 'category_id', 'status'];
-
-        foreach ($fields as $field) {
-            if (isset($data[$field])) {
-                $sets[] = "$field = ?";
-                $params[] = $data[$field];
+{
+    try {
+        $this->db->beginTransaction();
+        
+        // Cập nhật thông tin bài viết
+        $sql = "UPDATE articles SET 
+                title = :title,
+                slug = :slug,
+                content = :content,
+                summary = :summary,
+                category_id = :category_id,
+                featured_image = :featured_image,
+                updated_at = NOW()
+                WHERE id = :id";
+        
+        $stmt = $this->db->prepare($sql);
+        $result = $stmt->execute([
+            'title' => $data['title'],
+            'slug' => $data['slug'],
+            'content' => $data['content'],
+            'summary' => $data['summary'] ?? null,
+            'category_id' => $data['category_id'],
+            'featured_image' => $data['featured_image'] ?? null,
+            'id' => $id
+        ]);
+        
+        // ✅ LOG ĐỂ DEBUG
+        error_log("SQL Update result: " . ($result ? 'true' : 'false'));
+        error_log("Featured image value: " . ($data['featured_image'] ?? 'NULL'));
+        
+        // Cập nhật tags nếu có
+        if (isset($data['tags'])) {
+            // Xóa tags cũ
+            $this->db->prepare("DELETE FROM article_tags WHERE article_id = :article_id")
+                     ->execute(['article_id' => $id]);
+            
+            // Thêm tags mới
+            if (!empty($data['tags'])) {
+                $tagSql = "INSERT INTO article_tags (article_id, tag_id) VALUES (:article_id, :tag_id)";
+                $tagStmt = $this->db->prepare($tagSql);
+                
+                foreach ($data['tags'] as $tagId) {
+                    $tagStmt->execute([
+                        'article_id' => $id,
+                        'tag_id' => $tagId
+                    ]);
+                }
             }
         }
-
-        if (empty($sets)) {
-            return false;
-        }
-
-        $sets[] = "updated_at = NOW()";
-
-        $params[] = $id;
-        $sql = "UPDATE articles SET " . implode(', ', $sets) . " WHERE id = ?";
-
-        $stmt = $this->db->prepare($sql);
-        $result = $stmt->execute($params);
-
-        if ($result && isset($data['tags'])) {
-            $this->saveTags($id, $data['tags']);
-        }
-
-        return $result;
+        
+        $this->db->commit();
+        return true;
+        
+    } catch (\PDOException $e) {
+        $this->db->rollBack();
+        error_log("Error updating article: " . $e->getMessage());
+        return false;
     }
+}
 
     /**
      * Save tags for an article
@@ -578,13 +606,16 @@ class Article extends Model
         $stmt->execute([$userId, $limit]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    /**
-     * Count articles by category
-     */
+
     public function countByCategory(int $categoryId): int
-    {
-        $stmt = $this->db->prepare('SELECT COUNT(*) FROM articles WHERE category_id = ?');
-        $stmt->execute([$categoryId]);
-        return (int)$stmt->fetchColumn();
-    }
+{
+    $stmt = $this->db->prepare('
+        SELECT COUNT(*) as count 
+        FROM articles 
+        WHERE category_id = ?
+    ');
+    $stmt->execute([$categoryId]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int)$result['count'];
+}
 }
