@@ -1,13 +1,42 @@
-RewriteEngine On
-RewriteBase /Web-Project/
+# Disable directory browsing
+Options -Indexes
 
-# Force root to use the front controller
-RewriteRule ^$ public/index.php [QSA,L]
+# Set default files
+DirectoryIndex index.php index.html
 
-# Allow direct access to files inside /public (css, js, images, etc.)
-RewriteRule ^public/ - [L]
+# Enable URL rewriting
+<IfModule mod_rewrite.c>
+    Options +FollowSymLinks
+    RewriteEngine On
+    RewriteBase /
+    
+    # Remove trailing slash if not a directory
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [R=301,L]
+    
+    # Skip rewrite for existing files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Rewrite all other URLs to index.php
+    RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>
 
-# Route all other requests to the front controller
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ public/index.php [QSA,L]
+# Error documents (InfinityFree default)
+ErrorDocument 403 https://errors.infinityfree.net/errors/403/
+ErrorDocument 404 https://errors.infinityfree.net/errors/404/
+ErrorDocument 500 https://errors.infinityfree.net/errors/500/
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# PHP settings
+<IfModule mod_php.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+</IfModule>
