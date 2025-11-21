@@ -382,105 +382,6 @@ class AdminController extends Controller
         ]);
     }
 
-    public function createCategory(): void
-    {
-        if (!$this->checkAdminAccess()) return;
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            return;
-        }
-
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo 'Invalid CSRF token';
-            return;
-        }
-
-        $name = trim($_POST['name'] ?? '');
-        $slug = trim($_POST['slug'] ?? '');
-
-        if (empty($name) || empty($slug)) {
-            http_response_code(400);
-            echo 'Tên và slug không được để trống';
-            return;
-        }
-
-        $categoryModel = new Category();
-        if ($categoryModel->create(['name' => $name, 'slug' => $slug])) {
-            header('Location: ' . BASE_URL . '/admin/categories?success=created');
-        } else {
-            http_response_code(500);
-            echo 'Không thể tạo danh mục';
-        }
-    }
-
-    public function updateCategory(string $id): void
-    {
-        if (!$this->checkAdminAccess()) return;
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            return;
-        }
-
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo 'Invalid CSRF token';
-            return;
-        }
-
-        $name = trim($_POST['name'] ?? '');
-        $slug = trim($_POST['slug'] ?? '');
-
-        if (empty($name) || empty($slug)) {
-            http_response_code(400);
-            echo 'Tên và slug không được để trống';
-            return;
-        }
-
-        $categoryModel = new Category();
-        if ($categoryModel->update((int)$id, ['name' => $name, 'slug' => $slug])) {
-            header('Location: ' . BASE_URL . '/admin/categories?success=updated');
-        } else {
-            http_response_code(500);
-            echo 'Không thể cập nhật danh mục';
-        }
-    }
-
-    public function deleteCategory(string $id): void
-    {
-        if (!$this->checkAdminAccess()) return;
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            return;
-        }
-
-        if (!CSRF::validate($_POST['csrf'] ?? null)) {
-            http_response_code(400);
-            echo 'Invalid CSRF token';
-            return;
-        }
-
-        $articleModel = new Article();
-        $count = $articleModel->countByCategory((int)$id);
-
-        if ($count > 0) {
-            http_response_code(400);
-            echo "Không thể xóa danh mục có {$count} bài viết. Vui lòng chuyển bài viết sang danh mục khác trước.";
-            return;
-        }
-
-        $categoryModel = new Category();
-        if ($categoryModel->delete((int)$id)) {
-            header('Location: ' . BASE_URL . '/admin/categories?success=deleted');
-        } else {
-            http_response_code(500);
-            echo 'Không thể xóa danh mục';
-        }
-    }
-
     // ========== TAGS MANAGEMENT ==========
     public function tags(): void
     {
@@ -864,5 +765,166 @@ public function statistics(): void
         'categoryStats' => $this->adminModel->getCategoryStatistics(),
         'popularArticles' => $this->adminModel->getPopularArticles(10)
     ]);
+}
+public function createCategory(): void
+{
+    if (!$this->checkAdminAccess()) return;
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        header('Location: ' . BASE_URL . '/admin/categories');
+        return;
+    }
+
+    if (!CSRF::validate($_POST['csrf'] ?? null)) {
+        http_response_code(400);
+        header('Location: ' . BASE_URL . '/admin/categories?error=csrf');
+        return;
+    }
+
+    $name = trim($_POST['name'] ?? '');
+    $slug = trim($_POST['slug'] ?? '');
+
+    // Validation
+    if (empty($name) || empty($slug)) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=missing_fields');
+        return;
+    }
+
+    // Validate slug format (chỉ chữ thường, số, dấu gạch ngang)
+    if (!preg_match('/^[a-z0-9-]+$/', $slug)) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=invalid_slug');
+        return;
+    }
+
+    $categoryModel = new Category();
+    
+    // Kiểm tra slug đã tồn tại chưa
+    if ($categoryModel->findBySlug($slug)) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=slug_exists');
+        return;
+    }
+
+    // Kiểm tra tên đã tồn tại chưa
+    if ($categoryModel->findByName($name)) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=name_exists');
+        return;
+    }
+
+    // Create category và nhận ID trả về
+    $categoryId = $categoryModel->create(['name' => $name, 'slug' => $slug]);
+    
+    if ($categoryId) {
+        ActivityLogger::log('category_create', $categoryId);
+        header('Location: ' . BASE_URL . '/admin/categories?success=created');
+    } else {
+        header('Location: ' . BASE_URL . '/admin/categories?error=create_failed');
+    }
+}
+
+public function updateCategory(string $id): void
+{
+    if (!$this->checkAdminAccess()) return;
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        header('Location: ' . BASE_URL . '/admin/categories');
+        return;
+    }
+
+    if (!CSRF::validate($_POST['csrf'] ?? null)) {
+        http_response_code(400);
+        header('Location: ' . BASE_URL . '/admin/categories?error=csrf');
+        return;
+    }
+
+    $categoryId = (int)$id;
+    $name = trim($_POST['name'] ?? '');
+    $slug = trim($_POST['slug'] ?? '');
+
+    // Validation
+    if (empty($name) || empty($slug)) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=missing_fields');
+        return;
+    }
+
+    // Validate slug format
+    if (!preg_match('/^[a-z0-9-]+$/', $slug)) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=invalid_slug');
+        return;
+    }
+
+    $categoryModel = new Category();
+    
+    // Kiểm tra danh mục có tồn tại không
+    $currentCategory = $categoryModel->findById($categoryId);
+    if (!$currentCategory) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=not_found');
+        return;
+    }
+
+    // Kiểm tra slug đã tồn tại chưa (trừ chính nó)
+    $existingSlug = $categoryModel->findBySlug($slug);
+    if ($existingSlug && $existingSlug['id'] != $categoryId) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=slug_exists');
+        return;
+    }
+
+    // Kiểm tra tên đã tồn tại chưa (trừ chính nó)
+    $existingName = $categoryModel->findByName($name);
+    if ($existingName && $existingName['id'] != $categoryId) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=name_exists');
+        return;
+    }
+
+    if ($categoryModel->update($categoryId, ['name' => $name, 'slug' => $slug])) {
+        ActivityLogger::log('category_update', $categoryId);
+        header('Location: ' . BASE_URL . '/admin/categories?success=updated');
+    } else {
+        header('Location: ' . BASE_URL . '/admin/categories?error=update_failed');
+    }
+}
+
+public function deleteCategory(string $id): void
+{
+    if (!$this->checkAdminAccess()) return;
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        header('Location: ' . BASE_URL . '/admin/categories');
+        return;
+    }
+
+    if (!CSRF::validate($_POST['csrf'] ?? null)) {
+        http_response_code(400);
+        header('Location: ' . BASE_URL . '/admin/categories?error=csrf');
+        return;
+    }
+
+    $categoryId = (int)$id;
+    
+    $categoryModel = new Category();
+    $category = $categoryModel->findById($categoryId);
+    
+    if (!$category) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=not_found');
+        return;
+    }
+
+    // Kiểm tra xem danh mục có bài viết không
+    $articleModel = new Article();
+    $count = $articleModel->countByCategory($categoryId);
+
+    if ($count > 0) {
+        header('Location: ' . BASE_URL . '/admin/categories?error=has_articles');
+        return;
+    }
+
+    if ($categoryModel->delete($categoryId)) {
+        ActivityLogger::log('category_delete', $categoryId);
+        header('Location: ' . BASE_URL . '/admin/categories?success=deleted');
+    } else {
+        header('Location: ' . BASE_URL . '/admin/categories?error=delete_failed');
+    }
 }
 }
