@@ -8,7 +8,7 @@ use App\Core\Controller;
 class ApiController extends Controller
 {
     // API Keys - LƯU VÀO .env HOẶC config.php
-    private const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE'; // Lấy tại: https://makersuite.google.com/app/apikey
+    private const GEMINI_API_KEY = 'AIzaSyDsNrPnjFRCnc08s2gwSpxigIpKUQAFgqg'; // Lấy tại: https://makersuite.google.com/app/apikey
     
     /**
      * Tóm tắt nội dung bài viết - SỬ DỤNG AI
